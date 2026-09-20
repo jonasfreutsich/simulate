@@ -2,9 +2,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import random
 
-from types.simulators.linear import LinearTrend
+from custom_types.simulation_model import (
+    SimulationConstraints,
+    SimulationContext,
+    SimulationModel,
+)
+from custom_types.simulators.linear import LinearTrend
 
-from types.data_series import DataPoint, DataSeries
+from dataseries.data_series import DataPoint, DataSeries
 
 # ---------------------------------------------------------------------------
 # Simulator

@@ -75,3 +75,9 @@ class DataSeries(Sequence[DataPoint]):
         right = bisect_right(self._timestamps, end)
 
         return DataSeries(self._points[left:right])
+
+    def start(self) -> DataPoint:
+        return self._points[0]
+
+    def end(self) -> DataPoint:
+        return self._points[-1]
