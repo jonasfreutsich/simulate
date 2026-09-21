@@ -1,5 +1,6 @@
 from datetime import datetime
 from threading import currentThread
+from typing import Dict, List, Sequence, Tuple
 
 from curl_cffi import CurlECode
 
@@ -18,22 +19,16 @@ class Backtracker:
         portfolio: Portfolio,
         start: datetime,
         end: datetime,
-    ) -> DataSeries:
+    ) -> Tuple[DataSeries, Portfolio]:
 
         series_by_ticker = {
             ticker: self.loader.load(ticker) for ticker in portfolio.get_positions()
         }
 
-        timestamps = sorted(
-            {
-                point.timestamp
-                for series in series_by_ticker.values()
-                for point in series.between(start, end)
-            }
-        )
+        timestamps = DataSeries.common_timeline(series_by_ticker.values())
 
         if not timestamps:
-            return DataSeries()
+            return DataSeries(), portfolio.copy()
 
         starting_positions = portfolio.get_positions()
 
@@ -49,7 +44,7 @@ class Backtracker:
         last_prices = {ticker: dp.value for ticker, dp in last_prices.items()}  # type: ignore
         points = []
 
-        current_portfolio = Portfolio(portfolio.get_positions())
+        result_portfolio = portfolio.copy()
 
         for timestamp in timestamps:
             changes = {}
@@ -60,16 +55,16 @@ class Backtracker:
                 changes[ticker] = price / last_prices[ticker]
                 last_prices[ticker] = price
 
-            current_portfolio.update(changes)
+            result_portfolio.update(changes)
 
             points.append(
                 DataPoint(
                     timestamp,
-                    current_portfolio.get_value(),
+                    result_portfolio.get_value(),
                 )
             )
 
-            if current_portfolio.is_crashed():
+            if result_portfolio.is_crashed():
                 break
 
-        return DataSeries(points)
+        return DataSeries(points), result_portfolio
