@@ -39,7 +39,7 @@ class FlowBacktracker:
             ValueError: If start is after end or if tickers are not unique."""
         if start > end:
             raise ValueError("Start must not be after end.")
-        if len(self.tickers) != len(set(self.tickers)):
+        if len(tickers) != len(set(tickers)):
             raise ValueError("Tickers must be unique.")
         self.loader = loader
         self.timestamps: Sequence[datetime] = ()
