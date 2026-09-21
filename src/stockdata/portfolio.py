@@ -20,11 +20,17 @@ class Portfolio:
         self._positions = positions
         self._normalize()
 
+    def __str__(self) -> str:
+        return str(self._positions)
+
     def get_value(self) -> float:
         return self._value
 
     def get_positions(self) -> Dict[str, float]:
         return self._positions.copy()
+
+    def copy(self) -> "Portfolio":
+        return Portfolio(self.get_positions())
 
     def update(self, position_changes: Dict[str, float]) -> None:
         for ticker in self._positions:
