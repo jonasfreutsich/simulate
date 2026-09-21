@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import Dict, List, Sequence, Tuple
+from typing import Tuple
 
-from curl_cffi import CurlECode
 
 from dataseries.data_series import DataPoint, DataSeries
 from stockdata.portfolio import Portfolio
