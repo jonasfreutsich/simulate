@@ -81,3 +81,16 @@ class DataSeries(Sequence[DataPoint]):
 
     def end(self) -> DataPoint:
         return self._points[-1]
+
+    def timeline(self) -> Sequence[datetime]:
+        return tuple(sorted(point.timestamp for point in self._points))
+
+    @staticmethod
+    def common_timeline(series: Iterable["DataSeries"]) -> Sequence[datetime]:
+        if not series:
+            return ()
+
+        timelines = [set(data.timeline()) for data in series]
+        common = set.intersection(*timelines)
+
+        return tuple(sorted(common))
