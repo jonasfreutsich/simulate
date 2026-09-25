@@ -7,7 +7,7 @@ import yfinance as yf
 class YFinanceAPI:
 
     @staticmethod
-    def download(ticker: str, data_dir: Path) -> DataFrame:
+    def download(ticker: str, path: Path) -> DataFrame:
         try:
             data = yf.Ticker(ticker).history(period="max")
 
@@ -17,8 +17,6 @@ class YFinanceAPI:
                     "The ticker may not exist or Yahoo Finance may have no historical data."
                 )
 
-            path: Path = data_dir / f"{ticker}.parquet"
-            print(path.absolute())
             data.to_parquet(path)
 
             return data
