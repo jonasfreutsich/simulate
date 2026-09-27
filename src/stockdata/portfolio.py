@@ -1,5 +1,7 @@
 from typing import Dict
 
+from dataseries.data_series import DataSeries
+
 ZERO_THRESHOLD = 1e-5
 
 
@@ -16,15 +18,21 @@ class Portfolio:
         if sum(positions.values()) <= ZERO_THRESHOLD:
             raise ValueError("Portfolio value must be positive.")
 
-        self._value = 1
         self._positions = positions
-        self._normalize()
 
     def __str__(self) -> str:
         return str(self._positions)
 
+    def __repr__(self) -> str:
+        return f"Portfolio(positions={self._positions})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Portfolio):
+            return NotImplemented
+        return self._positions == other._positions
+
     def get_value(self) -> float:
-        return self._value
+        return sum(self._positions.values())
 
     def get_positions(self) -> Dict[str, float]:
         return self._positions.copy()
@@ -32,18 +40,27 @@ class Portfolio:
     def copy(self) -> "Portfolio":
         return Portfolio(self.get_positions())
 
-    def update(self, position_changes: Dict[str, float]) -> None:
+    def flow(self, position_changes: Dict[str, float] | Dict[str, DataSeries]) -> None:
         for ticker in self._positions:
-            self._positions[ticker] *= position_changes.get(ticker, 1)
-        self._normalize()
+            change = position_changes.get(
+                ticker, 1.0
+            )  # Default to no change if not specified
+            if isinstance(change, DataSeries):
+                for datapoint in change:
+                    self._positions[ticker] *= datapoint.value
+            elif isinstance(change, float):
+                self._positions[ticker] *= change
+            else:
+                raise ValueError(
+                    f"Invalid type for position change: {type(change)}. Must be float or DataSeries."
+                )
 
     def is_crashed(self) -> bool:
         return abs(self.get_value()) < ZERO_THRESHOLD
 
-    def _normalize(self) -> None:
-        total = sum(self._positions.values())
-        self._value *= total
+    def normalize(self) -> "Portfolio":
+        total = self.get_value()
 
-        self._positions = {
-            ticker: value / total for ticker, value in self._positions.items()
-        }
+        return Portfolio(
+            {ticker: value / total for ticker, value in self._positions.items()}
+        )
