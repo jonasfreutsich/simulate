@@ -26,7 +26,7 @@ class TimeSeriesSnapshot:
         return (self.final_value - self.initial_value) / self.initial_value * 100
 
     @property
-    def is_crashed(self) -> bool:
+    def crashed(self) -> bool:
         return self.final_portfolio.is_crashed()
 
     @property
@@ -36,3 +36,9 @@ class TimeSeriesSnapshot:
     @property
     def end_timestamp(self) -> datetime | None:
         return self.series[-1].timestamp if self.series else None
+
+    def __bool__(self) -> bool:
+        return bool(self.series)
+
+    def __len__(self) -> int:
+        return len(self.series)

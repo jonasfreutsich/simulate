@@ -29,6 +29,9 @@ class DataSeries(Sequence[DataPoint]):
     def __len__(self) -> int:
         return len(self._points)
 
+    def __bool__(self) -> bool:
+        return bool(self._points)
+
     @overload
     def __getitem__(self, index: int) -> DataPoint: ...
 
