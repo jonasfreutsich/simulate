@@ -4,7 +4,7 @@ import pytest
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from dataseries.data_series import DataPoint, DataSeries
-from stockdata.portfolio import Portfolio
+from custom_types.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
 # ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ def test_flow_calculation_uses_price_before_tracker_start(loader):
         end=dt(1),
         tickers=["A"],
     )
-
+    print(tracker.flows)
     assert tracker.flows["A"][dt(0)] == 2.0
     assert tracker.flows["A"][dt(1)] == 1.5
 
@@ -202,11 +202,13 @@ def test_rejects_invalid_price(loader, invalid_price):
         }
     )
 
-    with pytest.raises(ValueError, match="Could not determine a valid price"):
+    with pytest.raises(
+        ValueError, match="Could not determine valid starting prices for A"
+    ):
         FlowBacktracker(
             loader=loader,
             start=dt(0),
-            end=dt(0),
+            end=dt(1),
             tickers=["A"],
         )
 
@@ -219,31 +221,27 @@ def test_rejects_invalid_price(loader, invalid_price):
 def test_backtrack_window_applies_flows(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    data, result = backtracker.backtrack_window(
+    snap = backtracker.backtrack_window(
         portfolio,
         TimeWindow(dt(0), dt(3)),
     )
+    assert len(snap.series) == 3
+    assert int(snap.series.value_at(dt(1))) == 110
+    assert int(snap.series.value_at(dt(2))) == 100
+    assert int(snap.series.value_at(dt(3))) == 120
 
-    assert data == DataSeries(
-        [
-            (dt(1), 110.0),
-            (dt(2), 100.0),
-            (dt(3), 120.0),
-        ]
-    )
-
-    assert result == Portfolio({"A": 120.0})
+    assert snap.final_portfolio == Portfolio({"A": 120.0})
 
 
 def test_backtrack_window_does_not_include_start_timestamp(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    data, _ = backtracker.backtrack_window(
+    snapshot = backtracker.backtrack_window(
         portfolio,
         TimeWindow(dt(1), dt(3)),
     )
 
-    assert [point.timestamp for point in data] == [
+    assert [point.timestamp for point in snapshot.series] == [
         dt(2),
         dt(3),
     ]
@@ -252,36 +250,36 @@ def test_backtrack_window_does_not_include_start_timestamp(backtracker):
 def test_backtrack_window_includes_end_timestamp(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    data, _ = backtracker.backtrack_window(
+    snapshot = backtracker.backtrack_window(
         portfolio,
         TimeWindow(dt(1), dt(3)),
     )
 
-    assert data[-1].timestamp == dt(3)
+    assert snapshot.end_timestamp == dt(3)
 
 
 def test_backtrack_window_does_not_mutate_original_portfolio(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    _, result = backtracker.backtrack_window(
+    snapshot = backtracker.backtrack_window(
         portfolio,
         TimeWindow(dt(0), dt(3)),
     )
 
     assert portfolio == Portfolio({"A": 100.0})
-    assert result == Portfolio({"A": 120.0})
+    assert snapshot.final_portfolio != portfolio
 
 
 def test_backtrack_window_with_start_equal_end(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    data, result = backtracker.backtrack_window(
+    snap = backtracker.backtrack_window(
         portfolio,
         TimeWindow(dt(2), dt(2)),
     )
 
-    assert len(data) == 0
-    assert result == portfolio
+    assert len(snap) == 0
+    assert snap.final_portfolio == portfolio
 
 
 def test_backtrack_window_rejects_invalid_range(backtracker):
@@ -382,16 +380,16 @@ def test_rolling_backtrack_matches_individual_backtracks(backtracker):
     )
 
     for window in rolling_window:
-        expected_data, expected_portfolio = backtracker.backtrack(
+        expected_snap = backtracker.backtrack(
             portfolio,
             window.start,
             window.end,
         )
 
-        actual_data, actual_portfolio = rolling_result[window]
+        actual_snap = rolling_result[window]
 
-        assert actual_data == expected_data
-        assert actual_portfolio == expected_portfolio
+        assert DataSeries.is_close(actual_snap.series, expected_snap.series)
+        assert actual_snap.final_portfolio == expected_snap.final_portfolio
 
 
 def test_rolling_backtrack_does_not_mutate_input_portfolio(backtracker):
@@ -436,16 +434,16 @@ def test_backtrack_stops_after_portfolio_crashes():
         tickers=["A"],
     )
 
-    data, result = tracker.backtrack(
+    snap = tracker.backtrack(
         Portfolio({"A": 100.0}),
         dt(0),
         dt(3),
     )
 
     # The first update crashes the portfolio.
-    assert len(data) == 1
-    assert data[0].timestamp == dt(1)
-    assert result.is_crashed()
+    assert len(snap) == 1
+    assert snap.end_timestamp == dt(1)
+    assert snap.crashed
 
 
 # ---------------------------------------------------------------------------
@@ -456,12 +454,12 @@ def test_backtrack_stops_after_portfolio_crashes():
 def test_window_boundary_semantics(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    data, _ = backtracker.backtrack_window(
+    snap = backtracker.backtrack_window(
         portfolio,
         TimeWindow(dt(1), dt(3)),
     )
 
-    timestamps = [point.timestamp for point in data]
+    timestamps = [point.timestamp for point in snap.series]
 
     # start is exclusive, end is inclusive
     assert timestamps == [dt(2), dt(3)]
@@ -471,7 +469,7 @@ def test_window_start_between_data_points(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
     # There is no timestamp at day 1.5.
-    data, _ = backtracker.backtrack_window(
+    snap = backtracker.backtrack_window(
         portfolio,
         TimeWindow(
             dt(1) + timedelta(hours=12),
@@ -479,7 +477,7 @@ def test_window_start_between_data_points(backtracker):
         ),
     )
 
-    assert [point.timestamp for point in data] == [
+    assert [point.timestamp for point in snap.series] == [
         dt(2),
         dt(3),
     ]
@@ -498,7 +496,7 @@ def test_backtrack_updates_each_position_independently(backtracker):
         }
     )
 
-    _, result = backtracker.backtrack(
+    snap = backtracker.backtrack(
         portfolio,
         dt(0),
         dt(3),
@@ -506,7 +504,7 @@ def test_backtrack_updates_each_position_independently(backtracker):
 
     # A: 100 -> 110 -> 100 -> 120
     # B: 100 -> 110 -> 100 -> 90
-    assert result == Portfolio(
+    assert snap.final_portfolio == Portfolio(
         {
             "A": 120.0,
             "B": 90.0,

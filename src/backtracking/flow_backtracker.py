@@ -1,10 +1,11 @@
 from bisect import bisect_right
 from datetime import datetime
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Sequence
 
+from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from dataseries.data_series import DataPoint, DataSeries
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
-from stockdata.portfolio import Portfolio
+from custom_types.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
 
@@ -113,14 +114,14 @@ class FlowBacktracker:
         portfolio: Portfolio,
         start: datetime,
         end: datetime,
-    ) -> Tuple[DataSeries, Portfolio]:
+    ) -> TimeSeriesSnapshot:
         """Backtrack the portfolio value over the specified time range using pre-calculated flows.
         Args:
             portfolio (Portfolio): The initial portfolio to backtrack.
             start (datetime): The start timestamp for backtracking.
             end (datetime): The end timestamp for backtracking.
         Returns:
-                Tuple[DataSeries, Portfolio]: A tuple containing the backtracked data series and the updated portfolio.
+                TimeSeriesSnapshot: A snapshot containing the backtracked data series and the updated portfolio.
         Raises:
             ValueError: If the start or end timestamps are outside the valid range of this tracker.
             ValueError: If any ticker in the portfolio is not configured for this tracker.
@@ -138,7 +139,7 @@ class FlowBacktracker:
         self,
         portfolio: Portfolio,
         rolling_window: RollingTimeWindow,
-    ) -> Dict[TimeWindow, Tuple[DataSeries, Portfolio]]:
+    ) -> Dict[TimeWindow, TimeSeriesSnapshot]:
         """Backtrack the portfolio value over a rolling time window using pre-calculated flows.
 
         Args:
@@ -155,7 +156,7 @@ class FlowBacktracker:
         for ticker in portfolio.get_positions():
             if ticker not in self.tickers:
                 raise ValueError(f"{ticker} is not configured for this tracker.")
-        result: Dict[TimeWindow, Tuple[DataSeries, Portfolio]] = {}
+        result: Dict[TimeWindow, TimeSeriesSnapshot] = {}
 
         for window in rolling_window:
             result[window] = self.backtrack_window(portfolio, window)
@@ -166,14 +167,14 @@ class FlowBacktracker:
         self,
         portfolio: Portfolio,
         window: TimeWindow,
-    ) -> Tuple[DataSeries, Portfolio]:
+    ) -> TimeSeriesSnapshot:
         """Backtrack a portfolio from the state at window.start through window.end.
         Args:
             portfolio (Portfolio): The initial portfolio to backtrack.
             window (TimeWindow): The time window for backtracking.
 
         Returns:
-            Tuple[DataSeries, Portfolio]: A tuple containing the backtracked data series and the updated portfolio.
+            TimeSeriesSnapshot: A snapshot containing the backtracked data series and the updated portfolio.
         Raises:
             ValueError: If the start or end of the window is outside the valid range of this tracker.
             ValueError: If any ticker in the portfolio is not configured for this tracker.
@@ -204,4 +205,4 @@ class FlowBacktracker:
                     updated_portfolio.get_value(),
                 )
             )
-        return DataSeries(points), updated_portfolio
+        return TimeSeriesSnapshot(portfolio, DataSeries(points), updated_portfolio)
