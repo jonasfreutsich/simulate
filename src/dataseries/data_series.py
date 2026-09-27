@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable, Iterator, Sequence, overload
 
+ZERO_THRESHOLD = 1e-7
+
 
 @dataclass(frozen=True, slots=True)
 class DataPoint:
@@ -97,3 +99,13 @@ class DataSeries(Sequence[DataPoint]):
         common = set.intersection(*timelines)
 
         return tuple(sorted(common))
+
+    @staticmethod
+    def is_close(left: "DataSeries", right: "DataSeries") -> bool:
+        if len(left) != len(right):
+            return False
+        for dp in left:
+            other = right.value_at(dp.timestamp)
+            if abs(other - dp.value) >= ZERO_THRESHOLD:
+                return False
+        return True
