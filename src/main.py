@@ -6,7 +6,8 @@ from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
-from statistics.events.event import EventProcessor, NegativeReturnEvent
+from statistics.events.event import NegativeReturnEvent
+from statistics.events.event_processor import EventProcessor
 from stockdata.stock_data_loader import StockDataLoader
 import time
 
