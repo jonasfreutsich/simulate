@@ -1,7 +1,9 @@
+from bisect import bisect_right
 from datetime import datetime
-from typing import Dict, Sequence, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 from dataseries.data_series import DataPoint, DataSeries
+from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from stockdata.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
@@ -46,7 +48,7 @@ class FlowBacktracker:
         self.flows: Dict[str, Dict[datetime, float]] = {}
         self.start = start
         self.end = end
-        self.tickers = tickers
+        self.tickers = tuple(tickers)
         self._calculate_flows()
 
     def _calculate_flows(self) -> None:
@@ -100,7 +102,7 @@ class FlowBacktracker:
                         f"Could not determine a valid price for {ticker} "
                         f"at {timestamp}: {price}"
                     )
-                # Calculate the flow for this timestamp
+                # Flow represents the multiplicative price change since the previous timestamp.
                 ticker_flows[timestamp] = price / last_prices[ticker]
                 # Update the last price for the next iteration
                 last_prices[ticker] = price
@@ -117,42 +119,89 @@ class FlowBacktracker:
             portfolio (Portfolio): The initial portfolio to backtrack.
             start (datetime): The start timestamp for backtracking.
             end (datetime): The end timestamp for backtracking.
-            Returns:
+        Returns:
                 Tuple[DataSeries, Portfolio]: A tuple containing the backtracked data series and the updated portfolio.
+        Raises:
+            ValueError: If the start or end timestamps are outside the valid range of this tracker.
+            ValueError: If any ticker in the portfolio is not configured for this tracker.
         """
-        if start > end:
-            raise ValueError("Start must not be after end.")
-        if start < self.start or self.end < end:
-            raise ValueError(
-                "Start and End are outisde of the valid range of this tracker."
-            )
-
-        positions = tuple(portfolio.get_positions())
-
-        # Check if all tickers in the portfolio are configured for this tracker
-        for ticker in positions:
+        for ticker in portfolio.get_positions():
             if ticker not in self.tickers:
                 raise ValueError(f"{ticker} is not configured for this tracker.")
+
+        return self.backtrack_window(
+            portfolio,
+            TimeWindow(start, end),
+        )
+
+    def rolling_backtrack(
+        self,
+        portfolio: Portfolio,
+        rolling_window: RollingTimeWindow,
+    ) -> Dict[TimeWindow, Tuple[DataSeries, Portfolio]]:
+        """Backtrack the portfolio value over a rolling time window using pre-calculated flows.
+
+        Args:
+            portfolio: The initial portfolio to backtrack.
+            rolling_window: The rolling time window for backtracking.
+
+        Returns:
+            A dictionary mapping each time window to its backtracked data series
+            and updated portfolio.
+        Raises:
+            ValueError: If the start or end of any window is outside the valid range of this tracker.
+            ValueError: If any ticker in the portfolio is not configured for this tracker.
+        """
+        for ticker in portfolio.get_positions():
+            if ticker not in self.tickers:
+                raise ValueError(f"{ticker} is not configured for this tracker.")
+        result: Dict[TimeWindow, Tuple[DataSeries, Portfolio]] = {}
+
+        for window in rolling_window:
+            result[window] = self.backtrack_window(portfolio, window)
+
+        return result
+
+    def backtrack_window(
+        self,
+        portfolio: Portfolio,
+        window: TimeWindow,
+    ) -> Tuple[DataSeries, Portfolio]:
+        """Backtrack a portfolio from the state at window.start through window.end.
+        Args:
+            portfolio (Portfolio): The initial portfolio to backtrack.
+            window (TimeWindow): The time window for backtracking.
+
+        Returns:
+            Tuple[DataSeries, Portfolio]: A tuple containing the backtracked data series and the updated portfolio.
+        Raises:
+            ValueError: If the start or end of the window is outside the valid range of this tracker.
+            ValueError: If any ticker in the portfolio is not configured for this tracker.
+        """
+
+        if window.start < self.start or self.end < window.end:
+            raise ValueError(
+                "Start and End of the window are outside of the valid range of this tracker."
+            )
+        start_index = bisect_right(self.timestamps, window.start)
+        end_index = bisect_right(self.timestamps, window.end)
+
+        positions = tuple(portfolio.get_positions())
         updated_portfolio = portfolio.copy()
-        points = []
+        points: List[DataPoint] = []
 
-        # Iterate over the timestamps in the specified range
-        for timestamp in filter(lambda ts: start < ts <= end, self.timestamps):
-            update: Dict[str, float] = {}
-            # Update the portfolio based on the pre-calculated flows for each ticker
-            for ticker in positions:
-                update[ticker] = self.flows[ticker][timestamp]
+        for timestamp in self.timestamps[start_index:end_index]:
+            if updated_portfolio.is_crashed():
+                break
 
-            updated_portfolio.update(update)
-            # Append the current timestamp and portfolio value to results
+            update = {ticker: self.flows[ticker][timestamp] for ticker in positions}
+
+            updated_portfolio.flow(update)
+
             points.append(
                 DataPoint(
                     timestamp,
                     updated_portfolio.get_value(),
                 )
             )
-            # If the portfolio has crashed (value is effectively zero), we stop the backtracking
-            if updated_portfolio.is_crashed():
-                break
-
         return DataSeries(points), updated_portfolio
