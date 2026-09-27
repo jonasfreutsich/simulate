@@ -29,7 +29,12 @@ class Portfolio:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Portfolio):
             return NotImplemented
-        return self._positions == other._positions
+        if self._positions.keys() != other._positions.keys():
+            return False
+        for key in self._positions:
+            if abs(self._positions[key] - other._positions[key]) >= ZERO_THRESHOLD:
+                return False
+        return True
 
     def get_value(self) -> float:
         return sum(self._positions.values())
