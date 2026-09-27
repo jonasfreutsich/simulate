@@ -4,7 +4,7 @@ import pytest
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from dataseries.data_series import DataPoint, DataSeries
-from stockdata.portfolio import Portfolio
+from custom_types.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
 # ---------------------------------------------------------------------------
