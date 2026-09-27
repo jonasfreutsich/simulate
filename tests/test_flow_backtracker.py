@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from tracemalloc import Snapshot
 
 import pytest
 from backtracking.flow_backtracker import FlowBacktracker
