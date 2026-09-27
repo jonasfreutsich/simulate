@@ -7,12 +7,13 @@ from dataseries.data_series import DataSeries
 
 @dataclass
 class TimeSeriesSnapshot:
+    initial_portfolio: Portfolio
     series: DataSeries
-    portfolio: Portfolio
+    final_portfolio: Portfolio
 
     @property
     def initial_value(self) -> float:
-        return self.series[0].value if self.series else 0.0
+        return self.initial_portfolio.get_value()
 
     @property
     def final_value(self) -> float:
@@ -26,7 +27,7 @@ class TimeSeriesSnapshot:
 
     @property
     def is_crashed(self) -> bool:
-        return self.portfolio.is_crashed()
+        return self.final_portfolio.is_crashed()
 
     @property
     def start_timestamp(self) -> datetime | None:

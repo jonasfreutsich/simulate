@@ -205,4 +205,4 @@ class FlowBacktracker:
                     updated_portfolio.get_value(),
                 )
             )
-        return TimeSeriesSnapshot(DataSeries(points), updated_portfolio)
+        return TimeSeriesSnapshot(portfolio, DataSeries(points), updated_portfolio)
