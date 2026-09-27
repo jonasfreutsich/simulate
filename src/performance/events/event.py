@@ -2,6 +2,8 @@ from abc import abstractmethod
 
 
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from performance.portfolio_metric import MaxDrawDownMetric
+from performance.portfolio_metric import VolatilityMetric
 
 
 class Event:
@@ -26,7 +28,7 @@ class LimitDrawDownEvent(Event):
         self.limit_percent = limit_percent
 
     def filter(self, snapshot: TimeSeriesSnapshot) -> bool:
-        return (snapshot.max_drawdown() * 100) > self.limit_percent
+        return (MaxDrawDownMetric().metric(snapshot) * 100) > self.limit_percent
 
 
 class LimitVolatilityEvent(Event):
@@ -34,4 +36,4 @@ class LimitVolatilityEvent(Event):
         self.limit_percent = limit_percent
 
     def filter(self, snapshot: TimeSeriesSnapshot) -> bool:
-        return (snapshot.volatility() * 100) > self.limit_percent
+        return (VolatilityMetric().metric(snapshot) * 100) > self.limit_percent
