@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple, overload
 
 from custom_types.rolling_time_window import TimeWindow
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
-from statistics.events.event import Event
+from performance.events.event import Event
 
 
 class EventProcessor:
