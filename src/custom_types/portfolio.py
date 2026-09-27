@@ -12,8 +12,8 @@ class Portfolio:
         if not positions:
             raise ValueError("Portfolio cannot be empty.")
 
-        if any(value < 0 for value in positions.values()):
-            raise ValueError("Positions cannot be negative.")
+        if any(value <= 0 for value in positions.values()):
+            raise ValueError("Positions cannot be non-positive.")
 
         if sum(positions.values()) <= ZERO_THRESHOLD:
             raise ValueError("Portfolio value must be positive.")
