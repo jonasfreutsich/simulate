@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from statistics import stdev
-from typing import Sequence
+from typing import Dict, Sequence
 
 
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
@@ -54,3 +54,11 @@ class AnnualizedReturnMetric(PortfolioMetric):
         total_return = ReturnMetric().metric(snapshot)
         days = (snapshot.end_timestamp - snapshot.start_timestamp).days
         return total_return ** (365 / days)
+
+
+global_metrics: Dict[str, PortfolioMetric] = {
+    "ReturnMetric": ReturnMetric(),
+    "DrawdownMetric": MaxDrawdownMetric(),
+    "VolatilityMetric": VolatilityMetric(),
+    "AnnualizedReturnMetric": AnnualizedReturnMetric(),
+}

@@ -3,7 +3,8 @@ from typing import Dict
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.portfolio import Portfolio
-from custom_types.rolling_time_window import RollingTimeWindow
+from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
+from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.events.event import PortfolioEvent
 from performance.events.event_processor import EventProcessor
 from performance.portfolio_metric import PortfolioMetric
@@ -25,6 +26,7 @@ class PortfolioPerformance:
             self.rolling_window.end,
             list(self.portfolio.get_positions().keys()),
         ).rolling_backtrack(portfolio, rolling_window)
+        self._filter(self.snapshots)
 
     def performance(
         self, metrics: Dict[str, PortfolioMetric], events: Dict[str, PortfolioEvent]
@@ -37,3 +39,9 @@ class PortfolioPerformance:
             results[key] = metric.average(tuple(self.snapshots.values()))
 
         return results
+
+    @staticmethod
+    def _filter(snapshots: Dict[TimeWindow, TimeSeriesSnapshot]) -> None:
+        del_keys = set(filter(lambda key: not bool(snapshots[key]), snapshots.keys()))
+        for key in del_keys:
+            del snapshots[key]

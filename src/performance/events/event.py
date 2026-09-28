@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Dict
 
 
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
@@ -23,7 +24,7 @@ class NegativeReturnEvent(PortfolioEvent):
         return snapshot.initial_value > snapshot.final_value
 
 
-class LimitDrawDownEvent(PortfolioEvent):
+class LimitDrawdownEvent(PortfolioEvent):
     def __init__(self, limit_percent: int):
         self.limit_percent = limit_percent
 
@@ -37,3 +38,15 @@ class LimitVolatilityEvent(PortfolioEvent):
 
     def filter(self, snapshot: TimeSeriesSnapshot) -> bool:
         return (VolatilityMetric().metric(snapshot) * 100) > self.limit_percent
+
+
+global_events: Dict[str, "PortfolioEvent"] = {
+    "CrashEvent": CrashEvent(),
+    "NegativeReturnEvent": NegativeReturnEvent(),
+    "10DrawdownEvent": LimitDrawdownEvent(10),
+    "20DrawdownEvent": LimitDrawdownEvent(20),
+    "30DrawdownEvent": LimitDrawdownEvent(30),
+    "10VolatilityEvent": LimitVolatilityEvent(10),
+    "20VolatilityEvent": LimitVolatilityEvent(20),
+    "30VolatilityEvent": LimitVolatilityEvent(30),
+}
