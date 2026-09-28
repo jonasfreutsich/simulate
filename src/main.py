@@ -8,8 +8,11 @@ from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.events.event import NegativeReturnEvent
 from performance.events.event_processor import EventProcessor
-from performance.portfolio_metric import AnnualizedReturnMetric
-from performance.portfolio_metric import ReturnMetric
+from performance.portfolio_metric import (
+    AnnualizedReturnMetric,
+    MaxDrawdownMetric,
+    ReturnMetric,
+)
 from stockdata.stock_data_loader import StockDataLoader
 import time
 
@@ -32,12 +35,13 @@ def flow_backtrack(start, end, portfolio) -> TimeSeriesSnapshot:
 
 def benchmark_backtrack():
     portfolio = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
-    start = datetime.fromisoformat("2026-01-01T20:00:00+00:00")
+    start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
     result = flow_backtrack(start, end, portfolio)
     metric = AnnualizedReturnMetric().metric(result)
     print(metric)
     print(ReturnMetric().metric(result))
+    print(MaxDrawdownMetric().metric(result))
 
 
 def test_event_eval():
