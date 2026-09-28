@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from statistics import stdev
+from typing import Sequence
 
 
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
@@ -9,13 +10,16 @@ class PortfolioMetric:
     @abstractmethod
     def metric(self, snapshot: TimeSeriesSnapshot) -> float: ...
 
+    def average(self, snapshots: Sequence[TimeSeriesSnapshot]) -> float:
+        return sum(map(self.metric, snapshots)) / len(snapshots)
 
-class ReturnMetric:
+
+class ReturnMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
         return snapshot.final_value / snapshot.initial_value
 
 
-class MaxDrawDownMetric:
+class MaxDrawdownMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
         """Pre-condition: series only contains non-negative values."""
         max_value = 0.0
@@ -30,7 +34,7 @@ class MaxDrawDownMetric:
         return result
 
 
-class VolatilityMetric:
+class VolatilityMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
         if len(snapshot.series) < 2:
             return 0.0
@@ -43,7 +47,7 @@ class VolatilityMetric:
         return stdev(returns)
 
 
-class AnnualizedReturnMetric:
+class AnnualizedReturnMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
         if not snapshot.start_timestamp or not snapshot.end_timestamp:
             raise ValueError()
