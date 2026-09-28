@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from custom_types.portfolio import Portfolio
 from dataseries.data_series import DataSeries
@@ -36,6 +36,13 @@ class TimeSeriesSnapshot:
     @property
     def end_timestamp(self) -> datetime | None:
         return self.series[-1].timestamp if self.series else None
+
+    @property
+    def duration(self) -> timedelta | None:
+        if self.series:
+            return self.start_timestamp - self.end_timestamp  # type: ignore
+        else:
+            return None
 
     def __bool__(self) -> bool:
         return bool(self.series)
