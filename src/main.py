@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
+
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from custom_types.portfolio import Portfolio
@@ -33,16 +34,18 @@ def flow_backtrack(start, end, portfolio) -> TimeSeriesSnapshot:
 
 
 def test_performance():
-    portfolio = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
+    portfolioA = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
+    portfolioB = Portfolio(positions={"XWD.TO": 1})
+    portfolios = {portfolioA, portfolioB}
     start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
     performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     )
-    performance.print(portfolio, loader)
+    performance.print(portfolios, loader)
     OneYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    ).print(portfolio, loader)
+    ).print(portfolios, loader)
 
 
 def rolling_window_backtrack(

@@ -1,4 +1,4 @@
-from typing import Dict, Generator, Iterator
+from typing import Dict, Iterator
 
 from dataseries.data_series import DataSeries
 
@@ -25,6 +25,9 @@ class Portfolio:
 
     def __repr__(self) -> str:
         return f"Portfolio(positions={self._positions})"
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Portfolio):

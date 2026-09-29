@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from datetime import timedelta, datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
+
 
 from custom_types.portfolio import Portfolio
 from custom_types.rolling_time_window import RollingTimeWindow
+from myutils.utils import Utils
 from performance.events.event import PortfolioEvent
 from performance.portfolio_metric import PortfolioMetric
 from performance.portfolio_performance import PortfolioPerformance
@@ -24,8 +26,8 @@ class PerformanceParameters:
         return RollingTimeWindow(self.start, self.end, self.window_size, self.step_size)
 
     def performance(
-        self, portfolio: Portfolio, loader: StockDataLoader
-    ) -> Dict[str, float]:
+        self, loader: StockDataLoader, portfolios: Set[Portfolio]
+    ) -> Dict[Portfolio, Dict[str, float]]:
         if not (self.metrics or self.events):
             raise ValueError(
                 "Illegal configuration for PortfolioPerformance. Either metrics or events must be specified."
@@ -37,15 +39,19 @@ class PerformanceParameters:
             raise ValueError(
                 f"Events and Metrics must be named uniquely. Overlap {intersection}."
             )
-        return PortfolioPerformance(portfolio, self.rolling_window, loader).performance(
-            metrics or {}, events or {}
-        )
+        return PortfolioPerformance(
+            portfolios, self.rolling_window, loader
+        ).performance(metrics or {}, events or {})
 
-    def print(self, portfolio: Portfolio, loader: StockDataLoader) -> None:
-        performance_result = self.performance(portfolio, loader)
+    def print(
+        self, portfolio: Portfolio | Set[Portfolio], loader: StockDataLoader
+    ) -> None:
         print(self.__class__.__name__)
-        for key, value in performance_result.items():
-            print(f"    {key}: {value}")
+        if isinstance(portfolio, Portfolio):
+            performance_result = self.performance(loader, {portfolio})
+        elif isinstance(portfolio, set):
+            performance_result = self.performance(loader, portfolio)
+        print(Utils.dict_to_md_table(performance_result))
 
 
 @dataclass
