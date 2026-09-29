@@ -49,12 +49,11 @@ class FlowBacktracker:
         self.time_range: TimeWindow = window
         if portfolio is None and tickers is None:
             raise ValueError("tickers and portfolio must not both be None.")
-
         self.tickers: Set[str] = (
-            (set(tickers) if portfolio is None else set(iter(portfolio)))
-            if tickers is not None
-            else set()  # else branch is unreachable due to previous check.
+            set(tickers or set()) if portfolio is None else set(iter(portfolio))
         )
+        if not self.tickers:
+            raise ValueError("Input parameters did not contain any tickers!")
         self.portfolio: Optional[Portfolio] = portfolio
         self._calculate_flows()
 
