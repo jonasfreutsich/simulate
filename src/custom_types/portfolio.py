@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Generator, Iterator
 
 from dataseries.data_series import DataSeries
 
@@ -18,7 +18,7 @@ class Portfolio:
         if sum(positions.values()) <= ZERO_THRESHOLD:
             raise ValueError("Portfolio value must be positive.")
 
-        self._positions = positions
+        self._positions: Dict[str, float] = positions
 
     def __str__(self) -> str:
         return str(self._positions)
@@ -35,6 +35,14 @@ class Portfolio:
             if abs(self._positions[key] - other._positions[key]) >= ZERO_THRESHOLD:
                 return False
         return True
+
+    def __contains__(self, item: str) -> bool:
+        if isinstance(item, str):
+            return item in self._positions
+        raise NotImplementedError
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._positions)
 
     def get_value(self) -> float:
         return sum(self._positions.values())

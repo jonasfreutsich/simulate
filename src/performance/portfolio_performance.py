@@ -1,5 +1,7 @@
 from typing import Dict
 
+from numpy import roll
+
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.portfolio import Portfolio
@@ -22,10 +24,9 @@ class PortfolioPerformance:
         self.rolling_window = rolling_window
         self.snapshots = FlowBacktracker(
             loader,
-            self.rolling_window.start,
-            self.rolling_window.end,
-            list(self.portfolio.get_positions().keys()),
-        ).rolling_backtrack(portfolio, rolling_window)
+            rolling_window.get_range(),
+            portfolio=portfolio,
+        ).rolling_backtrack(rolling_window)
         self._filter(self.snapshots)
 
     def performance(

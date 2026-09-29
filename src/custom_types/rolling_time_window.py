@@ -8,6 +8,21 @@ class TimeWindow:
     start: datetime
     end: datetime
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.start, datetime) or not isinstance(self.end, datetime):
+            raise ValueError("start and end must be datetime instances.")
+        if self.start >= self.end:
+            raise ValueError("start must be before end.")
+
+    def __contains__(self, value) -> bool:
+        if isinstance(value, datetime):
+            return self.start <= value <= self.end
+
+        if isinstance(value, TimeWindow):
+            return self.start <= value.start and value.end <= self.end
+
+        return False
+
 
 class RollingTimeWindow:
     def __init__(
@@ -40,3 +55,6 @@ class RollingTimeWindow:
             if current_start < timestamp <= current_end:
                 yield TimeWindow(start=current_start, end=current_end)
             current_start += self.step_size
+
+    def get_range(self) -> TimeWindow:
+        return TimeWindow(self.start, self.end)
