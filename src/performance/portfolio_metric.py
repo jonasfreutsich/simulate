@@ -50,7 +50,9 @@ class VolatilityMetric(PortfolioMetric):
 class AnnualizedReturnMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
         duration = snapshot.duration
-        if duration is None or duration.days <= 0:
+        if duration is None:
+            raise ValueError("Snapshot duration is invalid")
+        if duration.days <= 0:
             raise ValueError("Snapshot duration must be positive")
 
         total_return = ReturnMetric().metric(snapshot)
