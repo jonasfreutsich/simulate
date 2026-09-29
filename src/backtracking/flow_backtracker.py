@@ -1,6 +1,7 @@
 from bisect import bisect_right
 from datetime import datetime
-from typing import Dict, List, Sequence
+from typing import Dict, List, Optional, Sequence, Set
+
 
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from dataseries.data_series import DataPoint, DataSeries
@@ -10,61 +11,67 @@ from stockdata.stock_data_loader import StockDataLoader
 
 
 class FlowBacktracker:
-    """A class to efficiently backtrack portfolio values over time using pre-calculated flows for each ticker.
-    This class is designed to optimize the backtracking process by pre-calculating the flows for each ticker over a specified time range, allowing for faster portfolio value calculations during backtracking.
+    """Backtrack portfolio values using precomputed per-ticker price flows.
+
+    During initialization, price-change factors are calculated for each
+    configured ticker at each common timestamp in the configured time range.
+    Backtracking then applies these factors to a portfolio without requiring
+    additional market-data lookups.
+
     Attributes:
-        loader (StockDataLoader): The data loader for fetching stock data.
-        timestamps (Sequence[datetime]): The list of timestamps within the specified time range.
-        flows (Dict[str, Dict[datetime, float]]): A dictionary mapping each ticker to its corresponding flow values at each timestamp.
-        start (datetime): The start timestamp for the backtracking period.
-        end (datetime): The end timestamp for the backtracking period.
-        tickers (Sequence[str]): The list of tickers to include in the backtracking.
-    Methods:
-        __init__: Initialize the FlowBacktracker with a data loader, time range, and tickers.
-        _calculate_flows: Pre-calculate the flows for each ticker over the specified time range.
-        backtrack: Backtrack the portfolio value over the specified time range using pre-calculated flows.
+        loader: Data loader used to retrieve historical price series.
+        timestamps: Sorted timestamps at which flows are available.
+        flows: Mapping of ticker -> timestamp -> multiplicative price change.
+        time_range: Time range covered by the precomputed flows.
+        tickers: Tickers for which flows have been calculated.
+        portfolio: Default portfolio used when none is supplied to
+            ``backtrack()`` or ``rolling_backtrack()``.
     """
 
     def __init__(
         self,
         loader: StockDataLoader,
-        start: datetime,
-        end: datetime,
-        tickers: Sequence[str],
+        window: TimeWindow,
+        tickers: Optional[Set[str]] = None,
+        portfolio: Optional[Portfolio] = None,
     ) -> None:
         """Initialize the FlowBacktracker with a data loader, time range, and tickers.
         Args:
             loader (StockDataLoader): The data loader for fetching stock data.
-            start (datetime): The start timestamp for the backtracking period.
-            end (datetime): The end timestamp for the backtracking period.
-            tickers (Sequence[str]): The list of tickers to include in the backtracking.
-        Raises:
-            ValueError: If start is after end or if tickers are not unique."""
-        if start > end:
-            raise ValueError("Start must not be after end.")
-        if len(tickers) != len(set(tickers)):
-            raise ValueError("Tickers must be unique.")
-        self.loader = loader
+            window (TimeWindow): datetime range used to limit ticker data and validating input windows for backtracking.
+            tickers (Set[str]): The set of tickers to include in the backtracking. If portfolio s specified, this will be overwritten by the key set of portfolio.
+            portfolio (Optional[Portfolio]): Initial portfolio to backtrack.
+        """
+
+        self.loader: StockDataLoader = loader
         self.timestamps: Sequence[datetime] = ()
         self.flows: Dict[str, Dict[datetime, float]] = {}
-        self.start = start
-        self.end = end
-        self.tickers = tuple(tickers)
+        self.time_range: TimeWindow = window
+        if portfolio is None and tickers is None:
+            raise ValueError("tickers and portfolio must not both be None.")
+
+        self.tickers: Set[str] = (
+            (set(tickers) if portfolio is None else set(iter(portfolio)))
+            if tickers is not None
+            else set()  # else branch is unreachable due to previous check.
+        )
+        self.portfolio: Optional[Portfolio] = portfolio
         self._calculate_flows()
 
     def _calculate_flows(self) -> None:
         """Pre-calculate the flows for each ticker over the specified time range.
         Raises:
-            ValueError: If valid starting prices cannot be determined for any ticker.
+            ValueError: If any ticker has no valid starting price.
+            ValueError: If any ticker has a non-positive price within the time range.
         """
         series_by_ticker = {ticker: self.loader.load(ticker) for ticker in self.tickers}
 
         # Pre-calculate the common timestamps that fall within the specified range
-        self.timestamps = [
+        self.timestamps = tuple(
             timestamp
             for timestamp in DataSeries.common_timeline(series_by_ticker.values())
-            if (self.start <= timestamp and timestamp <= self.end)
-        ]
+            if timestamp in self.time_range
+        )
         if not self.timestamps:
             self.flows = {ticker: {} for ticker in self.tickers}
             return  # Early return if there are no timestamps in the range
@@ -85,6 +92,8 @@ class FlowBacktracker:
                 "Could not determine valid starting prices for "
                 f"{', '.join(invalid_start_prices)} at {self.timestamps[0]}"
             )
+
+        assert all(dp is not None for dp in last_price_points.values())
         # Pre-calculate the last prices for each ticker at the start of the backtracking period
         last_prices = {
             ticker: datapoint.value
@@ -93,10 +102,11 @@ class FlowBacktracker:
         }
         # Pre-calculate the flows for each ticker at each timestamp
         self.flows = {}
-        for ticker in self.tickers:
+        for ticker, series in series_by_ticker.items():
             ticker_flows = {}
-            for timestamp in self.timestamps:
-                price = series_by_ticker[ticker].value_at(timestamp)
+            for datapoint in series.iter_at(self.timestamps):
+                price = datapoint.value
+                timestamp = datapoint.timestamp
                 # Check for invalid price values
                 if price <= 0:
                     raise ValueError(
@@ -110,35 +120,43 @@ class FlowBacktracker:
             self.flows[ticker] = ticker_flows
 
     def backtrack(
-        self,
-        portfolio: Portfolio,
-        start: datetime,
-        end: datetime,
+        self, window: TimeWindow, portfolio: Optional[Portfolio] = None
     ) -> TimeSeriesSnapshot:
         """Backtrack the portfolio value over the specified time range using pre-calculated flows.
         Args:
-            portfolio (Portfolio): The initial portfolio to backtrack.
-            start (datetime): The start timestamp for backtracking.
-            end (datetime): The end timestamp for backtracking.
+            window (TimeWindow): Backtrack window.
+            ortfolio (Portfolio): The initial portfolio to backtrack.
         Returns:
                 TimeSeriesSnapshot: A snapshot containing the backtracked data series and the updated portfolio.
         Raises:
-            ValueError: If the start or end timestamps are outside the valid range of this tracker.
+            ValueError: If window is outside the valid range of this tracker.
             ValueError: If any ticker in the portfolio is not configured for this tracker.
         """
-        for ticker in portfolio.get_positions():
-            if ticker not in self.tickers:
-                raise ValueError(f"{ticker} is not configured for this tracker.")
+        # validate window
+        if window.start < self.time_range.start or self.time_range.end < window.end:
+            raise ValueError(
+                "Window parameter is not in the valid time range of the tracker."
+            )
+        if portfolio is not None:
+            self._validate_portfolio(portfolio)
+            backtracking_portfolio = portfolio
+        else:
+            backtracking_portfolio = self.portfolio
+
+        if backtracking_portfolio is None:
+            raise ValueError(
+                "The backtracker was not initialized with a portfolio, you must specify a portfolio."
+            )
 
         return self.backtrack_window(
-            portfolio,
-            TimeWindow(start, end),
+            window,
+            backtracking_portfolio,
         )
 
     def rolling_backtrack(
         self,
-        portfolio: Portfolio,
         rolling_window: RollingTimeWindow,
+        portfolio: Optional[Portfolio] = None,
     ) -> Dict[TimeWindow, TimeSeriesSnapshot]:
         """Backtrack the portfolio value over a rolling time window using pre-calculated flows.
 
@@ -153,41 +171,53 @@ class FlowBacktracker:
             ValueError: If the start or end of any window is outside the valid range of this tracker.
             ValueError: If any ticker in the portfolio is not configured for this tracker.
         """
-        for ticker in portfolio.get_positions():
-            if ticker not in self.tickers:
-                raise ValueError(f"{ticker} is not configured for this tracker.")
+
+        if portfolio is not None:
+            self._validate_portfolio(portfolio)
+            backtrack_portfolio = portfolio
+        else:
+            backtrack_portfolio = self.portfolio
+
+        if backtrack_portfolio is None:
+            raise ValueError(
+                "The backtracker was not initialized with a portfolio, you must specify a portfolio."
+            )
+        if rolling_window.get_range() not in self.time_range:
+            raise ValueError(
+                "Provided rolling_window is not within the valid time range of the backtracker."
+            )
+
         result: Dict[TimeWindow, TimeSeriesSnapshot] = {}
 
         for window in rolling_window:
-            result[window] = self.backtrack_window(portfolio, window)
+            result[window] = self.backtrack_window(window, backtrack_portfolio)
 
         return result
 
     def backtrack_window(
-        self,
-        portfolio: Portfolio,
-        window: TimeWindow,
+        self, window: TimeWindow, portfolio: Portfolio
     ) -> TimeSeriesSnapshot:
-        """Backtrack a portfolio from the state at window.start through window.end.
+        """Backtrack a portfolio over a time window.
+
+        The portfolio state at ``window.start`` is treated as the initial state.
+        Flow updates are applied for timestamps strictly after ``window.start``
+        and up to and including ``window.end``.
+
         Args:
-            portfolio (Portfolio): The initial portfolio to backtrack.
-            window (TimeWindow): The time window for backtracking.
+            window: The time window for backtracking. The caller must ensure that
+                it is contained within the tracker's configured time range.
+            portfolio: The initial portfolio state. The caller must ensure that
+                all portfolio tickers are configured for the tracker.
 
         Returns:
-            TimeSeriesSnapshot: A snapshot containing the backtracked data series and the updated portfolio.
-        Raises:
-            ValueError: If the start or end of the window is outside the valid range of this tracker.
-            ValueError: If any ticker in the portfolio is not configured for this tracker.
+            A snapshot containing the initial portfolio, the resulting time series,
+            and the final portfolio state.
         """
-
-        if window.start < self.start or self.end < window.end:
-            raise ValueError(
-                "Start and End of the window are outside of the valid range of this tracker."
-            )
         start_index = bisect_right(self.timestamps, window.start)
         end_index = bisect_right(self.timestamps, window.end)
 
-        positions = tuple(portfolio.get_positions())
+        # filter flow tickers to those present in porfolio
+        relevant_tickers = tuple(ticker for ticker in self.flows if ticker in portfolio)
         updated_portfolio = portfolio.copy()
         points: List[DataPoint] = []
 
@@ -195,7 +225,9 @@ class FlowBacktracker:
             if updated_portfolio.is_crashed():
                 break
 
-            update = {ticker: self.flows[ticker][timestamp] for ticker in positions}
+            update = {
+                ticker: self.flows[ticker][timestamp] for ticker in relevant_tickers
+            }
 
             updated_portfolio.flow(update)
 
@@ -206,3 +238,8 @@ class FlowBacktracker:
                 )
             )
         return TimeSeriesSnapshot(portfolio, DataSeries(points), updated_portfolio)
+
+    def _validate_portfolio(self, portfolio: Portfolio) -> None:
+        for ticker in portfolio:
+            if ticker not in self.tickers:
+                raise ValueError(f"{ticker} is not configured for this tracker.")
