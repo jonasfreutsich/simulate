@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
 import pytest
+
 from backtracking.flow_backtracker import FlowBacktracker
+from custom_types.portfolio import Portfolio
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from dataseries.data_series import DataPoint, DataSeries
-from custom_types.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
 # ---------------------------------------------------------------------------
@@ -47,7 +48,8 @@ def loader() -> InMemoryStockDataLoader:
             t3 = 180
             t4 =  90
 
-    The first flow is calculated relative to the observation before t0.
+    Each series also contains a price at t=-1, which is used to
+    calculate the flow at t=0.
     """
     return InMemoryStockDataLoader(
         {
@@ -79,10 +81,48 @@ def loader() -> InMemoryStockDataLoader:
 def backtracker(loader: InMemoryStockDataLoader) -> FlowBacktracker:
     return FlowBacktracker(
         loader=loader,
-        start=dt(0),
-        end=dt(4),
-        tickers=["A", "B"],
+        window=TimeWindow(dt(0), dt(4)),
+        tickers={"A", "B"},
     )
+
+
+# ---------------------------------------------------------------------------
+# TimeWindow
+# ---------------------------------------------------------------------------
+
+
+def test_time_window_contains_datetime():
+    window = TimeWindow(dt(1), dt(3))
+
+    assert dt(1) in window
+    assert dt(2) in window
+    assert dt(3) in window
+    assert dt(0) not in window
+    assert dt(4) not in window
+
+
+def test_time_window_contains_nested_window():
+    outer = TimeWindow(dt(0), dt(4))
+
+    assert TimeWindow(dt(0), dt(4)) in outer
+    assert TimeWindow(dt(1), dt(3)) in outer
+    assert TimeWindow(dt(1), dt(4)) in outer
+    assert TimeWindow(dt(0), dt(3)) in outer
+
+
+def test_time_window_does_not_contain_overlapping_window():
+    outer = TimeWindow(dt(1), dt(3))
+
+    assert TimeWindow(dt(0), dt(2)) not in outer
+    assert TimeWindow(dt(2), dt(4)) not in outer
+    assert TimeWindow(dt(0), dt(4)) not in outer
+
+
+def test_time_window_does_not_contain_unsupported_type():
+    window = TimeWindow(dt(0), dt(4))
+
+    assert "2020-01-01" not in window
+    assert 1 not in window
 
 
 # ---------------------------------------------------------------------------
@@ -91,34 +131,35 @@ def backtracker(loader: InMemoryStockDataLoader) -> FlowBacktracker:
 
 
 def test_rejects_invalid_tracker_range(loader):
-    with pytest.raises(ValueError, match="Start must not be after end"):
+    with pytest.raises(ValueError, match="start must be before end"):
         FlowBacktracker(
             loader=loader,
-            start=dt(4),
-            end=dt(0),
-            tickers=["A"],
+            window=TimeWindow(dt(4), dt(0)),
+            tickers={"A", "B"},
         )
 
 
-def test_rejects_duplicate_tickers(loader):
-    with pytest.raises(ValueError, match="Tickers must be unique"):
-        FlowBacktracker(
-            loader=loader,
-            start=dt(0),
-            end=dt(4),
-            tickers=["A", "A"],
-        )
-
-
-def test_tickers_are_stored_as_immutable_sequence(loader):
+def test_tickers_are_stored(loader):
     tracker = FlowBacktracker(
         loader=loader,
-        start=dt(0),
-        end=dt(4),
-        tickers=["A", "B"],
+        window=TimeWindow(dt(0), dt(4)),
+        tickers={"A", "B"},
     )
 
-    assert tracker.tickers == ("A", "B")
+    assert tracker.tickers == {"A", "B"}
+
+
+def test_portfolio_tickers_override_configured_tickers(loader):
+    portfolio = Portfolio({"A": 100.0})
+
+    tracker = FlowBacktracker(
+        loader=loader,
+        window=TimeWindow(dt(0), dt(4)),
+        tickers={"A", "B"},
+        portfolio=portfolio,
+    )
+
+    assert tracker.tickers == {"A"}
 
 
 # ---------------------------------------------------------------------------
@@ -159,11 +200,10 @@ def test_flow_calculation_uses_price_before_tracker_start(loader):
 
     tracker = FlowBacktracker(
         loader=loader,
-        start=dt(0),
-        end=dt(1),
-        tickers=["A"],
+        window=TimeWindow(dt(0), dt(1)),
+        tickers={"A"},
     )
-    print(tracker.flows)
+
     assert tracker.flows["A"][dt(0)] == 2.0
     assert tracker.flows["A"][dt(1)] == 1.5
 
@@ -180,17 +220,19 @@ def test_rejects_missing_starting_price():
         }
     )
 
-    with pytest.raises(ValueError, match="Could not determine valid starting prices"):
+    with pytest.raises(
+        ValueError,
+        match="Could not determine valid starting prices for ",
+    ):
         FlowBacktracker(
             loader=loader,
-            start=dt(0),
-            end=dt(2),
-            tickers=["A"],
+            window=TimeWindow(dt(0), dt(2)),
+            tickers={"A"},
         )
 
 
 @pytest.mark.parametrize("invalid_price", [0.0, -1.0])
-def test_rejects_invalid_price(loader, invalid_price):
+def test_rejects_invalid_starting_price(loader, invalid_price):
     loader = InMemoryStockDataLoader(
         {
             "A": DataSeries(
@@ -203,14 +245,53 @@ def test_rejects_invalid_price(loader, invalid_price):
     )
 
     with pytest.raises(
-        ValueError, match="Could not determine valid starting prices for A"
+        ValueError,
+        match="Could not determine valid starting prices for A",
     ):
         FlowBacktracker(
             loader=loader,
-            start=dt(0),
-            end=dt(1),
-            tickers=["A"],
+            window=TimeWindow(dt(0), dt(1)),
+            tickers={"A"},
         )
+
+
+@pytest.mark.parametrize("invalid_price", [0.0, -1.0])
+def test_rejects_invalid_price_after_start(loader, invalid_price):
+    loader = InMemoryStockDataLoader(
+        {
+            "A": DataSeries(
+                [
+                    (dt(-1), 100.0),
+                    (dt(0), 100.0),
+                    (dt(1), invalid_price),
+                ]
+            )
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Could not determine a valid price for A",
+    ):
+        FlowBacktracker(
+            loader=loader,
+            window=TimeWindow(dt(0), dt(1)),
+            tickers={"A"},
+        )
+
+
+def test_empty_tracker_range_produces_empty_flows(loader):
+    tracker = FlowBacktracker(
+        loader=loader,
+        window=TimeWindow(dt(5), dt(6)),
+        tickers={"A", "B"},
+    )
+
+    assert tracker.flows == {
+        "A": {},
+        "B": {},
+    }
+    assert tracker.timestamps == ()
 
 
 # ---------------------------------------------------------------------------
@@ -221,24 +302,25 @@ def test_rejects_invalid_price(loader, invalid_price):
 def test_backtrack_window_applies_flows(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    snap = backtracker.backtrack_window(
-        portfolio,
+    snapshot = backtracker.backtrack_window(
         TimeWindow(dt(0), dt(3)),
+        portfolio,
     )
-    assert len(snap.series) == 3
-    assert int(snap.series.value_at(dt(1))) == 110
-    assert int(snap.series.value_at(dt(2))) == 100
-    assert int(snap.series.value_at(dt(3))) == 120
 
-    assert snap.final_portfolio == Portfolio({"A": 120.0})
+    assert len(snapshot.series) == 3
+    assert int(snapshot.series.value_at(dt(1))) == 110
+    assert int(snapshot.series.value_at(dt(2))) == 100
+    assert int(snapshot.series.value_at(dt(3))) == 120
+
+    assert snapshot.final_portfolio == Portfolio({"A": 120.0})
 
 
 def test_backtrack_window_does_not_include_start_timestamp(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
     snapshot = backtracker.backtrack_window(
-        portfolio,
         TimeWindow(dt(1), dt(3)),
+        portfolio,
     )
 
     assert [point.timestamp for point in snapshot.series] == [
@@ -251,8 +333,8 @@ def test_backtrack_window_includes_end_timestamp(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
     snapshot = backtracker.backtrack_window(
-        portfolio,
         TimeWindow(dt(1), dt(3)),
+        portfolio,
     )
 
     assert snapshot.end_timestamp == dt(3)
@@ -262,54 +344,12 @@ def test_backtrack_window_does_not_mutate_original_portfolio(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
     snapshot = backtracker.backtrack_window(
-        portfolio,
         TimeWindow(dt(0), dt(3)),
+        portfolio,
     )
 
     assert portfolio == Portfolio({"A": 100.0})
     assert snapshot.final_portfolio != portfolio
-
-
-def test_backtrack_window_with_start_equal_end(backtracker):
-    portfolio = Portfolio({"A": 100.0})
-
-    snap = backtracker.backtrack_window(
-        portfolio,
-        TimeWindow(dt(2), dt(2)),
-    )
-
-    assert len(snap) == 0
-    assert snap.final_portfolio == portfolio
-
-
-def test_backtrack_window_rejects_invalid_range(backtracker):
-    with pytest.raises(ValueError, match="Start must not be after end"):
-        backtracker.backtrack_window(
-            Portfolio({"A": 100.0}),
-            TimeWindow(dt(3), dt(2)),
-        )
-
-
-def test_backtrack_window_rejects_window_outside_tracker(backtracker):
-    with pytest.raises(ValueError, match="outside of the valid range"):
-        backtracker.backtrack_window(
-            Portfolio({"A": 100.0}),
-            TimeWindow(dt(-1), dt(2)),
-        )
-
-    with pytest.raises(ValueError, match="outside of the valid range"):
-        backtracker.backtrack_window(
-            Portfolio({"A": 100.0}),
-            TimeWindow(dt(2), dt(5)),
-        )
-
-
-def test_backtrack_window_rejects_unknown_ticker(backtracker):
-    with pytest.raises(ValueError, match="C is not configured"):
-        backtracker.backtrack_window(
-            Portfolio({"C": 100.0}),
-            TimeWindow(dt(0), dt(2)),
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -317,22 +357,57 @@ def test_backtrack_window_rejects_unknown_ticker(backtracker):
 # ---------------------------------------------------------------------------
 
 
-def test_backtrack_matches_backtrack_window(backtracker):
+def test_backtrack_delegates_to_backtrack_window(backtracker):
     portfolio = Portfolio({"A": 100.0, "B": 100.0})
+    window = TimeWindow(dt(1), dt(4))
 
-    data1, result1 = backtracker.backtrack(
-        portfolio,
-        dt(1),
-        dt(4),
+    actual = backtracker.backtrack(window, portfolio)
+    expected = backtracker.backtrack_window(window, portfolio)
+
+    assert len(actual) == len(expected)
+    assert int(100 * actual.final_value) == int(100 * expected.final_value)
+
+
+def test_backtrack_uses_default_portfolio(backtracker):
+    portfolio = Portfolio({"A": 100.0})
+
+    tracker = FlowBacktracker(
+        loader=backtracker.loader,
+        window=backtracker.time_range,
+        tickers={"A"},
+        portfolio=portfolio,
     )
 
-    data2, result2 = backtracker.backtrack_window(
-        portfolio,
-        TimeWindow(dt(1), dt(4)),
-    )
+    snapshot = tracker.backtrack(TimeWindow(dt(0), dt(2)))
 
-    assert data1 == data2
-    assert result1 == result2
+    assert snapshot.final_portfolio == Portfolio({"A": 100.0})
+
+
+def test_backtrack_rejects_window_outside_tracker(backtracker):
+    with pytest.raises(ValueError, match="valid time range"):
+        backtracker.backtrack(
+            TimeWindow(dt(-1), dt(2)),
+            Portfolio({"A": 100.0}),
+        )
+
+    with pytest.raises(ValueError, match="valid time range"):
+        backtracker.backtrack(
+            TimeWindow(dt(2), dt(5)),
+            Portfolio({"A": 100.0}),
+        )
+
+
+def test_backtrack_rejects_unknown_ticker(backtracker):
+    with pytest.raises(ValueError, match="C is not configured"):
+        backtracker.backtrack(
+            TimeWindow(dt(0), dt(2)),
+            Portfolio({"C": 100.0}),
+        )
+
+
+def test_backtrack_requires_portfolio(backtracker):
+    with pytest.raises(ValueError, match="must specify a portfolio"):
+        backtracker.backtrack(TimeWindow(dt(0), dt(2)))
 
 
 # ---------------------------------------------------------------------------
@@ -340,19 +415,25 @@ def test_backtrack_matches_backtrack_window(backtracker):
 # ---------------------------------------------------------------------------
 
 
-def test_rolling_backtrack_returns_expected_windows(backtracker):
-    portfolio = Portfolio({"A": 100.0})
-
-    rolling_window = RollingTimeWindow(
+@pytest.fixture
+def rolling_window() -> RollingTimeWindow:
+    return RollingTimeWindow(
         start=dt(0),
         end=dt(4),
         window_size=timedelta(days=2),
         step_size=timedelta(days=1),
     )
 
+
+def test_rolling_backtrack_returns_expected_windows(
+    backtracker,
+    rolling_window,
+):
+    portfolio = Portfolio({"A": 100.0})
+
     result = backtracker.rolling_backtrack(
-        portfolio,
         rolling_window,
+        portfolio,
     )
 
     expected_windows = [
@@ -364,47 +445,60 @@ def test_rolling_backtrack_returns_expected_windows(backtracker):
     assert list(result.keys()) == expected_windows
 
 
-def test_rolling_backtrack_matches_individual_backtracks(backtracker):
+def test_rolling_backtrack_matches_individual_backtracks(
+    backtracker,
+    rolling_window,
+):
     portfolio = Portfolio({"A": 100.0, "B": 100.0})
 
-    rolling_window = RollingTimeWindow(
-        start=dt(0),
-        end=dt(4),
-        window_size=timedelta(days=2),
-        step_size=timedelta(days=1),
-    )
-
     rolling_result = backtracker.rolling_backtrack(
-        portfolio,
         rolling_window,
+        portfolio,
     )
 
     for window in rolling_window:
-        expected_snap = backtracker.backtrack(
-            portfolio,
-            window.start,
-            window.end,
-        )
+        expected = backtracker.backtrack(window, portfolio)
+        actual = rolling_result[window]
 
-        actual_snap = rolling_result[window]
-
-        assert DataSeries.is_close(actual_snap.series, expected_snap.series)
-        assert actual_snap.final_portfolio == expected_snap.final_portfolio
+        assert DataSeries.is_close(actual.series, expected.series)
+        assert actual.final_portfolio == expected.final_portfolio
 
 
-def test_rolling_backtrack_does_not_mutate_input_portfolio(backtracker):
+def test_rolling_backtrack_does_not_mutate_input_portfolio(
+    backtracker,
+    rolling_window,
+):
     portfolio = Portfolio({"A": 100.0})
 
+    backtracker.rolling_backtrack(
+        rolling_window,
+        portfolio,
+    )
+
+    assert portfolio == Portfolio({"A": 100.0})
+
+
+def test_rolling_backtrack_rejects_window_outside_tracker(backtracker):
     rolling_window = RollingTimeWindow(
-        start=dt(0),
+        start=dt(-1),
         end=dt(4),
         window_size=timedelta(days=2),
         step_size=timedelta(days=1),
     )
 
-    backtracker.rolling_backtrack(portfolio, rolling_window)
+    with pytest.raises(ValueError, match="valid time range"):
+        backtracker.rolling_backtrack(
+            rolling_window,
+            Portfolio({"A": 100.0}),
+        )
 
-    assert portfolio == Portfolio({"A": 100.0})
+
+def test_rolling_backtrack_requires_portfolio(
+    backtracker,
+    rolling_window,
+):
+    with pytest.raises(ValueError, match="must specify a portfolio"):
+        backtracker.rolling_backtrack(rolling_window)
 
 
 # ---------------------------------------------------------------------------
@@ -429,55 +523,37 @@ def test_backtrack_stops_after_portfolio_crashes():
 
     tracker = FlowBacktracker(
         loader=loader,
-        start=dt(0),
-        end=dt(3),
-        tickers=["A"],
+        window=TimeWindow(dt(0), dt(3)),
+        tickers={"A"},
     )
 
-    snap = tracker.backtrack(
+    snapshot = tracker.backtrack(
+        TimeWindow(dt(0), dt(3)),
         Portfolio({"A": 100.0}),
-        dt(0),
-        dt(3),
     )
 
-    # The first update crashes the portfolio.
-    assert len(snap) == 1
-    assert snap.end_timestamp == dt(1)
-    assert snap.crashed
+    assert len(snapshot) == 1
+    assert snapshot.end_timestamp == dt(1)
+    assert snapshot.crashed
 
 
 # ---------------------------------------------------------------------------
-# Boundary-focused regression tests for bisect_right
+# Boundary behavior
 # ---------------------------------------------------------------------------
-
-
-def test_window_boundary_semantics(backtracker):
-    portfolio = Portfolio({"A": 100.0})
-
-    snap = backtracker.backtrack_window(
-        portfolio,
-        TimeWindow(dt(1), dt(3)),
-    )
-
-    timestamps = [point.timestamp for point in snap.series]
-
-    # start is exclusive, end is inclusive
-    assert timestamps == [dt(2), dt(3)]
 
 
 def test_window_start_between_data_points(backtracker):
     portfolio = Portfolio({"A": 100.0})
 
-    # There is no timestamp at day 1.5.
-    snap = backtracker.backtrack_window(
-        portfolio,
+    snapshot = backtracker.backtrack_window(
         TimeWindow(
             dt(1) + timedelta(hours=12),
             dt(3),
         ),
+        portfolio,
     )
 
-    assert [point.timestamp for point in snap.series] == [
+    assert [point.timestamp for point in snapshot.series] == [
         dt(2),
         dt(3),
     ]
@@ -496,15 +572,14 @@ def test_backtrack_updates_each_position_independently(backtracker):
         }
     )
 
-    snap = backtracker.backtrack(
+    snapshot = backtracker.backtrack(
+        TimeWindow(dt(0), dt(3)),
         portfolio,
-        dt(0),
-        dt(3),
     )
 
     # A: 100 -> 110 -> 100 -> 120
     # B: 100 -> 110 -> 100 -> 90
-    assert snap.final_portfolio == Portfolio(
+    assert snapshot.final_portfolio == Portfolio(
         {
             "A": 120.0,
             "B": 90.0,

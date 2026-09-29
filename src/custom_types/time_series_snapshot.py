@@ -40,7 +40,7 @@ class TimeSeriesSnapshot:
     @property
     def duration(self) -> timedelta | None:
         if self.series:
-            return self.start_timestamp - self.end_timestamp  # type: ignore
+            return self.end_timestamp - self.start_timestamp  # type: ignore[StartAndEndTimestampAreOnlyNoneIfSeriesIsNonEmpty]
         else:
             return None
 

@@ -1,7 +1,7 @@
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, Iterator, Sequence, overload
+from typing import Generator, Iterable, Iterator, Sequence, overload
 
 ZERO_THRESHOLD = 1e-7
 
@@ -89,6 +89,39 @@ class DataSeries(Sequence[DataPoint]):
 
     def timeline(self) -> Sequence[datetime]:
         return tuple(sorted(point.timestamp for point in self._points))
+
+    def iter_at(
+        self,
+        timestamps: Sequence[datetime],
+    ) -> Generator[DataPoint, None, None]:
+        """Yield data points matching the given sorted timestamps.
+
+        Args:
+            timestamps: Timestamps to look up, sorted in ascending order.
+
+        Yields:
+            Data points whose timestamps match an entry in ``timestamps``.
+        """
+        targets = iter(timestamps)
+
+        try:
+            target = next(targets)
+        except StopIteration:
+            return
+
+        for point in self:
+            while target < point.timestamp:
+                try:
+                    target = next(targets)
+                except StopIteration:
+                    return
+
+            if target == point.timestamp:
+                yield point
+                try:
+                    target = next(targets)
+                except StopIteration:
+                    return
 
     @staticmethod
     def common_timeline(series: Iterable["DataSeries"]) -> Sequence[datetime]:

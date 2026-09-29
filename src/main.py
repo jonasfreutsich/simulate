@@ -26,10 +26,8 @@ loader.load("XWD.TO")
 
 def flow_backtrack(start, end, portfolio) -> TimeSeriesSnapshot:
     now = time.time()
-    backtracker = FlowBacktracker(
-        loader, start, end, list(portfolio.get_positions().keys())
-    )
-    result = backtracker.backtrack(portfolio, start, end)
+    backtracker = FlowBacktracker(loader, TimeWindow(start, end), portfolio=portfolio)
+    result = backtracker.backtrack(TimeWindow(start, end))
     print(f"Flow backtrack time: {time.time() - now}")
     return result
 
@@ -51,11 +49,9 @@ def rolling_window_backtrack(
     start, end, window_size, step_size, portfolio
 ) -> Dict[TimeWindow, TimeSeriesSnapshot]:
     now = time.time()
-    backtracker = FlowBacktracker(
-        loader, start, end, list(portfolio.get_positions().keys())
-    )
+    backtracker = FlowBacktracker(loader, TimeWindow(start, end), portfolio)
     rolling_window = RollingTimeWindow(start, end, window_size, step_size)
-    result = backtracker.rolling_backtrack(portfolio, rolling_window)
+    result = backtracker.rolling_backtrack(rolling_window)
 
     print(f"Rolling window backtrack time: {time.time() - now}")
 
