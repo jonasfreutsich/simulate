@@ -20,6 +20,11 @@ class PerformanceReporter:
     def print(
         cls, performance: PortfolioPerformance, portfolios: Set[Portfolio]
     ) -> None:
-        print(performance.get_paramters_name())
         result = performance.evaluate(portfolios)
+        if not result:
+            raise ValueError()
+        print(
+            performance.get_paramters_name(),
+            f"Evaluated {result[portfolios.pop()].num_windows} windows.",
+        )
         print(cls.to_markdown(result))

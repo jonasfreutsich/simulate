@@ -17,8 +17,6 @@ class Utils:
     def float_to_percent_str(value: float | None, ndigits: int = 2) -> str:
         if value is None:
             return "None"
-        if isinstance(value, int):
-            return str(value)  # TODO thats dirty
         return str(Utils.float_to_percent(value, ndigits)) + " %"
 
     @staticmethod

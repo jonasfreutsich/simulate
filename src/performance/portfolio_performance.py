@@ -21,10 +21,9 @@ class PortfolioPerformanceResult:
     @property
     def result_dict(self) -> Dict[str, float]:
         return {
-            "Evaluated Windows:": self.num_windows,
             **self.metrics,
             **self.events,
-        }  # TODO suboptimal
+        }
 
 
 class PortfolioPerformance:
