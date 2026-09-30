@@ -46,12 +46,12 @@ def test_performance():
     performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
-    PerformanceReporter.print(performance.evaluate(portfolios))
+    PerformanceReporter.print(performance, portfolios)
     # One Year Performance
     performance = OneYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
-    PerformanceReporter.print(performance.evaluate(portfolios))
+    PerformanceReporter.print(performance, portfolios)
 
 
 def rolling_window_backtrack(

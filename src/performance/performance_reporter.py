@@ -1,8 +1,12 @@
-from typing import Dict
+from typing import Dict, Set
 
 from custom_types.portfolio import Portfolio
 from myutils.utils import Utils
-from performance.portfolio_performance import PortfolioPerformanceResult
+import performance
+from performance.portfolio_performance import (
+    PortfolioPerformance,
+    PortfolioPerformanceResult,
+)
 
 
 class PerformanceReporter:
@@ -13,7 +17,9 @@ class PerformanceReporter:
         )
 
     @classmethod
-    def print(cls, result: Dict[Portfolio, PortfolioPerformanceResult]) -> None:
-        # TODO print class name
-        # TODO print number of windows
+    def print(
+        cls, performance: PortfolioPerformance, portfolios: Set[Portfolio]
+    ) -> None:
+        print(performance.get_paramters_name())
+        result = performance.evaluate(portfolios)
         print(cls.to_markdown(result))

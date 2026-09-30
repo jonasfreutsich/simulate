@@ -20,7 +20,11 @@ class PortfolioPerformanceResult:
 
     @property
     def result_dict(self) -> Dict[str, float]:
-        return {**self.metrics, **self.events}
+        return {
+            "Evaluated Windows:": self.num_windows,
+            **self.metrics,
+            **self.events,
+        }  # TODO suboptimal
 
 
 class PortfolioPerformance:
@@ -33,6 +37,10 @@ class PortfolioPerformance:
         self.metrics = parameters.metrics
         self.events = parameters.events
         self.backtracker = backtracker
+        self.parameters = parameters
+
+    def get_paramters_name(self) -> str:
+        return self.parameters.__class__.__name__
 
     @classmethod
     def build(
