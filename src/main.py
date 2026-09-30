@@ -11,6 +11,7 @@ from performance.performance_parameters import (
     FiveYearPerformanceParameters,
     OneYearPerformanceParameters,
 )
+from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
     global_metrics,
 )
@@ -37,15 +38,20 @@ def test_performance():
     portfolioA = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
     portfolioB = Portfolio(positions={"XWD.TO": 1})
     portfolios = {portfolioA, portfolioB}
+    tickers = {ticker for portfolio in portfolios for ticker in portfolio}
     start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
+
+    # Five Year Performance
     performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    )
-    performance.print(portfolios, loader)
-    OneYearPerformanceParameters(
+    ).build(loader, tickers)
+    PerformanceReporter.print(performance.evaluate(portfolios))
+    # One Year Performance
+    performance = OneYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    ).print(portfolios, loader)
+    ).build(loader, tickers)
+    PerformanceReporter.print(performance.evaluate(portfolios))
 
 
 def rolling_window_backtrack(

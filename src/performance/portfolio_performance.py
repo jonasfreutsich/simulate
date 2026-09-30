@@ -1,47 +1,72 @@
-from typing import Dict, Set
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Dict, Set
 
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.portfolio import Portfolio
-from custom_types.rolling_time_window import RollingTimeWindow
 from myutils.utils import Utils
-from performance.events.event import PortfolioEvent
 from performance.events.event_processor import EventProcessor
-from performance.portfolio_metric import PortfolioMetric
+
+if TYPE_CHECKING:
+    from performance.performance_parameters import PerformanceParameters
 from stockdata.stock_data_loader import StockDataLoader
+
+
+@dataclass(frozen=True)
+class PortfolioPerformanceResult:
+    metrics: Dict[str, float]
+    events: Dict[str, float]
+    num_windows: int
+
+    @property
+    def result_dict(self) -> Dict[str, float]:
+        return {**self.metrics, **self.events}
 
 
 class PortfolioPerformance:
     def __init__(
         self,
-        portfolios: Set[Portfolio],
-        rolling_window: RollingTimeWindow,
-        loader: StockDataLoader,
+        parameters: "PerformanceParameters",
+        backtracker: FlowBacktracker,
     ):
-        tickers = set(ticker for portfolio in portfolios for ticker in portfolio)
-        self.backtracker = FlowBacktracker(
-            loader,
-            rolling_window.get_range(),
-            tickers=tickers,
+        self.rolling_window = parameters.rolling_window
+        self.metrics = parameters.metrics
+        self.events = parameters.events
+        self.backtracker = backtracker
+
+    @classmethod
+    def build(
+        cls,
+        loader: StockDataLoader,
+        tickers: Set[str],
+        parameters: "PerformanceParameters",
+    ):
+        backtracker = FlowBacktracker(
+            loader, parameters.rolling_window.get_range(), tickers=tickers
         )
-        self.portfolios = portfolios
-        self.rolling_window = rolling_window
+        return cls(parameters, backtracker)
 
-    def performance(
-        self, metrics: Dict[str, PortfolioMetric], events: Dict[str, PortfolioEvent]
-    ) -> Dict[Portfolio, Dict[str, float]]:
-        """Validation of metrics and events must be ensured by caller: Not both empty and no duplicate keys."""
-        event_processor = EventProcessor(events)
-        results: Dict[Portfolio, Dict[str, float]] = {}
-        for portfolio in self.portfolios:
-            snap = self.backtracker.rolling_backtrack(
-                self.rolling_window, portfolio=portfolio
-            )
-            Utils.filter_empty_snapshots(snap)
-            event_rates = event_processor.evaluate_event_rates(snap)
-            results[portfolio] = event_rates
+    def evaluate(
+        self,
+        portfolios: Set[Portfolio],
+    ) -> Dict[Portfolio, PortfolioPerformanceResult]:
+        event_processor = EventProcessor(self.events)
+        return {
+            portfolio: self._evaluate_portfolio(portfolio, event_processor)
+            for portfolio in portfolios
+        }
 
-            for key, metric in metrics.items():
-                results[portfolio][key] = metric.average(tuple(snap.values()))
-
-        return results
+    def _evaluate_portfolio(
+        self,
+        portfolio: Portfolio,
+        event_processor: EventProcessor,
+    ) -> PortfolioPerformanceResult:
+        snap = self.backtracker.rolling_backtrack(
+            self.rolling_window, portfolio=portfolio
+        )
+        Utils.filter_empty_snapshots(snap)
+        metric_results = dict(event_processor.evaluate_event_rates(snap))
+        event_results = {}
+        for key, metric in self.metrics.items():
+            event_results[key] = metric.average(tuple(snap.values()))
+        return PortfolioPerformanceResult(metric_results, event_results, len(snap))
