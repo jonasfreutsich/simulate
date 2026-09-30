@@ -11,6 +11,7 @@ from performance.performance_parameters import (
     FiveYearPerformanceParameters,
     OneYearPerformanceParameters,
 )
+from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
     global_metrics,
 )
@@ -41,11 +42,12 @@ def test_performance():
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
     performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    )
+    ).build(loader, portfolios)
+    PerformanceReporter.print(performance)
     performance.print(portfolios, loader)
     OneYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    ).print(portfolios, loader)
+    ).build(loader, portfolios)
 
 
 def rolling_window_backtrack(

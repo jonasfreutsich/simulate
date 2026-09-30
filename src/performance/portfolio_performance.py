@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, Set
 
 
@@ -11,37 +12,57 @@ from performance.portfolio_metric import PortfolioMetric
 from stockdata.stock_data_loader import StockDataLoader
 
 
+@dataclass(frozen=True)
+class PortfolioPerformanceResult:
+    metrics: Dict[str, float]
+    events: Dict[str, float]
+    num_windows: int
+
+    @property
+    def result_dict(self) -> Dict[str, float]:
+        return {**self.metrics, **self.events}
+
+
 class PortfolioPerformance:
-    def __init__(
-        self,
+    def __init__(self, portfolios, rolling_window, backtracker: FlowBacktracker):
+        self.portfolios = portfolios
+        self.rolling_window = rolling_window
+        self.backtracker = backtracker
+
+    @classmethod
+    def build(
+        cls,
         portfolios: Set[Portfolio],
         rolling_window: RollingTimeWindow,
         loader: StockDataLoader,
     ):
-        tickers = set(ticker for portfolio in portfolios for ticker in portfolio)
-        self.backtracker = FlowBacktracker(
-            loader,
-            rolling_window.get_range(),
-            tickers=tickers,
+        tickers = {t for p in portfolios for t in p}
+        backtracker = FlowBacktracker(
+            loader, rolling_window.get_range(), tickers=tickers
         )
-        self.portfolios = portfolios
-        self.rolling_window = rolling_window
+        return cls(portfolios, rolling_window, backtracker)
 
-    def performance(
+    def evaluate(
         self, metrics: Dict[str, PortfolioMetric], events: Dict[str, PortfolioEvent]
-    ) -> Dict[Portfolio, Dict[str, float]]:
-        """Validation of metrics and events must be ensured by caller: Not both empty and no duplicate keys."""
+    ) -> Dict[Portfolio, PortfolioPerformanceResult]:
         event_processor = EventProcessor(events)
-        results: Dict[Portfolio, Dict[str, float]] = {}
-        for portfolio in self.portfolios:
-            snap = self.backtracker.rolling_backtrack(
-                self.rolling_window, portfolio=portfolio
-            )
-            Utils.filter_empty_snapshots(snap)
-            event_rates = event_processor.evaluate_event_rates(snap)
-            results[portfolio] = event_rates
+        return {
+            portfolio: self._evaluate_portfolio(portfolio, metrics, event_processor)
+            for portfolio in self.portfolios
+        }
 
-            for key, metric in metrics.items():
-                results[portfolio][key] = metric.average(tuple(snap.values()))
-
-        return results
+    def _evaluate_portfolio(
+        self,
+        portfolio: Portfolio,
+        metrics: Dict[str, PortfolioMetric],
+        event_processor: EventProcessor,
+    ) -> PortfolioPerformanceResult:
+        snap = self.backtracker.rolling_backtrack(
+            self.rolling_window, portfolio=portfolio
+        )
+        Utils.filter_empty_snapshots(snap)
+        metric_results = dict(event_processor.evaluate_event_rates(snap))
+        event_results = {}
+        for key, metric in metrics.items():
+            event_results[key] = metric.average(tuple(snap.values()))
+        return PortfolioPerformanceResult(metric_results, event_results, len(snap))
