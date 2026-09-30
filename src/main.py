@@ -9,6 +9,7 @@ from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
+    OneYearMonthlyGrainPerformanceParameters,
     OneYearPerformanceParameters,
 )
 from performance.performance_reporter import PerformanceReporter
@@ -43,7 +44,7 @@ def test_performance():
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
 
     # Five Year Performance
-    performance = FiveYearPerformanceParameters(
+    performance = OneYearMonthlyGrainPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
     PerformanceReporter.print(performance, portfolios)

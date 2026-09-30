@@ -53,4 +53,10 @@ class TenYearPerformanceParameters(PerformanceParameters):
 @dataclass(frozen=True)
 class OneYearPerformanceParameters(PerformanceParameters):
     window_size: timedelta = timedelta(days=365)
+    step_size: timedelta = timedelta(days=365)
+
+
+@dataclass(frozen=True)
+class OneYearMonthlyGrainPerformanceParameters(PerformanceParameters):
+    window_size: timedelta = timedelta(days=365)
     step_size: timedelta = timedelta(days=30)
