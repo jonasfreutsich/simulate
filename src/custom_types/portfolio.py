@@ -5,6 +5,7 @@ from dataseries.data_series import DataSeries
 ZERO_THRESHOLD = 1e-5
 
 
+# TODO add support for dynamic allocation
 class Portfolio:
 
     def __init__(self, positions: Dict[str, float]) -> None:
