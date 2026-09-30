@@ -25,6 +25,6 @@ class PerformanceReporter:
             raise ValueError()
         print(performance.get_paramters_name())
         print(
-            f"Evaluated {result[portfolios.pop()].num_windows} windows in the {performance.rolling_window.get_range()}"
+            f"Evaluated {result[portfolios.copy().pop()].num_windows} windows in the {performance.rolling_window.get_range()}"
         )
         print(cls.to_markdown(result))
