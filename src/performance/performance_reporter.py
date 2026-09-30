@@ -23,8 +23,8 @@ class PerformanceReporter:
         result = performance.evaluate(portfolios)
         if not result:
             raise ValueError()
+        print(performance.get_paramters_name())
         print(
-            performance.get_paramters_name(),
-            f"Evaluated {result[portfolios.pop()].num_windows} windows.",
+            f"Evaluated {result[portfolios.pop()].num_windows} windows in the {performance.rolling_window.get_range()}"
         )
         print(cls.to_markdown(result))

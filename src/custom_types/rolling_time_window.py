@@ -23,6 +23,10 @@ class TimeWindow:
 
         return False
 
+    def __repr__(self) -> str:
+        fmt = "%Y-%m-%d"
+        return "TimeRange" + str([self.start.strftime(fmt), self.end.strftime(fmt)])
+
 
 class RollingTimeWindow:
     def __init__(
