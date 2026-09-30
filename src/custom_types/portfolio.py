@@ -21,10 +21,13 @@ class Portfolio:
         self._positions: Dict[str, float] = positions
 
     def __str__(self) -> str:
-        return str(self._positions)
+        return repr(self)
 
     def __repr__(self) -> str:
-        return f"Portfolio(positions={self._positions})"
+        repr = tuple(
+            ticker + "=" + str(value) for ticker, value in self._positions.items()
+        )
+        return f"Portfolio{repr}"
 
     def __hash__(self) -> int:
         return hash(str(self))
