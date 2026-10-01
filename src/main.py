@@ -43,12 +43,12 @@ def test_performance():
     start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
 
-    # Five Year Performance
+    # One Year Performance monthly grain
     performance = OneYearMonthlyGrainPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
     PerformanceReporter.print(performance, portfolios)
-    # One Year Performance
+    # One Year Performance yearly grain
     performance = OneYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)

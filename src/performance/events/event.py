@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Sequence
 
 
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
@@ -10,6 +10,11 @@ from performance.portfolio_metric import VolatilityMetric
 class PortfolioEvent:
     @abstractmethod
     def filter(self, snapshot: TimeSeriesSnapshot) -> bool: ...
+
+    def apply_filter(
+        self, snapshots: Sequence[TimeSeriesSnapshot]
+    ) -> Sequence[TimeSeriesSnapshot]:
+        return tuple(filter(self.filter, snapshots))
 
 
 class CrashEvent(PortfolioEvent):

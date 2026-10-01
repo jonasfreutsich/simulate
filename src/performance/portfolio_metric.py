@@ -16,7 +16,33 @@ class PortfolioMetric:
 
 class ReturnMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
-        return snapshot.final_value / snapshot.initial_value
+        return snapshot.final_value / snapshot.initial_value - 1
+
+
+class NegativeReturnMetric(PortfolioMetric):
+    """Averages ReturnMetric for negative return events only. If no negative return event occurs, 0.0 is returned."""
+
+    def metric(self, snapshot: TimeSeriesSnapshot) -> float:
+        raise NotImplemented
+
+    def average(self, snapshots: Sequence[TimeSeriesSnapshot]) -> float:
+        negative_return_snapshots = tuple(
+            filter(lambda snap: ReturnMetric().metric(snap) < 0.0, snapshots)
+        )
+        nbr_negative_events = len(negative_return_snapshots)
+        if nbr_negative_events == 0:
+            return 0.0
+        else:
+            r = (
+                sum(
+                    map(
+                        lambda snapshot: ReturnMetric().metric(snapshot),
+                        negative_return_snapshots,
+                    )
+                )
+                / nbr_negative_events
+            )
+            return r
 
 
 class MaxDrawdownMetric(PortfolioMetric):
@@ -56,7 +82,7 @@ class AnnualizedReturnMetric(PortfolioMetric):
             raise ValueError("Snapshot duration must be positive")
 
         total_return = ReturnMetric().metric(snapshot)
-        return total_return ** (365 / duration.days) - 1
+        return ((total_return + 1) ** (365 / duration.days)) - 1
 
 
 global_metrics: Dict[str, PortfolioMetric] = {
@@ -64,4 +90,5 @@ global_metrics: Dict[str, PortfolioMetric] = {
     "DrawdownMetric": MaxDrawdownMetric(),
     "VolatilityMetric": VolatilityMetric(),
     "AnnualizedReturnMetric": AnnualizedReturnMetric(),
+    "NegativeReturnMetric": NegativeReturnMetric(),
 }
