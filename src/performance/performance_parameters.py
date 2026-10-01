@@ -1,16 +1,13 @@
 from dataclasses import dataclass, field
 from datetime import timedelta, datetime
-from typing import Dict, Optional, Set
+from typing import Dict, Set
 
 
-from custom_types.portfolio import Portfolio
 from custom_types.rolling_time_window import RollingTimeWindow
-from myutils.utils import Utils
 from performance.events.event import PortfolioEvent
 from performance.portfolio_metric import PortfolioMetric
 from performance.portfolio_performance import (
     PortfolioPerformance,
-    PortfolioPerformanceResult,
 )
 from stockdata.stock_data_loader import StockDataLoader
 
@@ -37,17 +34,8 @@ class PerformanceParameters:
     def rolling_window(self) -> RollingTimeWindow:
         return RollingTimeWindow(self.start, self.end, self.window_size, self.step_size)
 
-    def build(
-        self, loader: StockDataLoader, portfolios: Set[Portfolio]
-    ) -> PortfolioPerformance:
-        metrics = self.metrics or {}
-        events = self.events
-        intersection = set.intersection(set(events.keys()), set(metrics.keys()))
-        if intersection:
-            raise ValueError(
-                f"Events and Metrics must be named uniquely. Overlap {intersection}."
-            )
-        return PortfolioPerformance.build(portfolios, self.rolling_window, loader)
+    def build(self, loader: StockDataLoader, tickers: Set[str]) -> PortfolioPerformance:
+        return PortfolioPerformance.build(loader, tickers, self)
 
 
 @dataclass(frozen=True)
@@ -64,5 +52,11 @@ class TenYearPerformanceParameters(PerformanceParameters):
 
 @dataclass(frozen=True)
 class OneYearPerformanceParameters(PerformanceParameters):
+    window_size: timedelta = timedelta(days=365)
+    step_size: timedelta = timedelta(days=365)
+
+
+@dataclass(frozen=True)
+class OneYearMonthlyGrainPerformanceParameters(PerformanceParameters):
     window_size: timedelta = timedelta(days=365)
     step_size: timedelta = timedelta(days=30)

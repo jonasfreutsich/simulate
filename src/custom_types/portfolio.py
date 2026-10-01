@@ -5,6 +5,7 @@ from dataseries.data_series import DataSeries
 ZERO_THRESHOLD = 1e-5
 
 
+# TODO add support for dynamic allocation
 class Portfolio:
 
     def __init__(self, positions: Dict[str, float]) -> None:
@@ -21,10 +22,13 @@ class Portfolio:
         self._positions: Dict[str, float] = positions
 
     def __str__(self) -> str:
-        return str(self._positions)
+        return repr(self)
 
     def __repr__(self) -> str:
-        return f"Portfolio(positions={self._positions})"
+        repr = tuple(
+            ticker + "=" + str(value) for ticker, value in self._positions.items()
+        )
+        return f"Portfolio{repr}"
 
     def __hash__(self) -> int:
         return hash(str(self))

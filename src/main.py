@@ -9,6 +9,7 @@ from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
+    OneYearMonthlyGrainPerformanceParameters,
     OneYearPerformanceParameters,
 )
 from performance.performance_reporter import PerformanceReporter
@@ -38,16 +39,20 @@ def test_performance():
     portfolioA = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
     portfolioB = Portfolio(positions={"XWD.TO": 1})
     portfolios = {portfolioA, portfolioB}
+    tickers = {ticker for portfolio in portfolios for ticker in portfolio}
     start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
-    performance = FiveYearPerformanceParameters(
+
+    # Five Year Performance
+    performance = OneYearMonthlyGrainPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    ).build(loader, portfolios)
-    PerformanceReporter.print(performance)
-    performance.print(portfolios, loader)
-    OneYearPerformanceParameters(
+    ).build(loader, tickers)
+    PerformanceReporter.print(performance, portfolios)
+    # One Year Performance
+    performance = OneYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    ).build(loader, portfolios)
+    ).build(loader, tickers)
+    PerformanceReporter.print(performance, portfolios)
 
 
 def rolling_window_backtrack(
