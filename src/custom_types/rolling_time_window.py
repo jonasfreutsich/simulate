@@ -16,12 +16,16 @@ class TimeWindow:
 
     def __contains__(self, value) -> bool:
         if isinstance(value, datetime):
-            return self.start <= value <= self.end
+            return self.start <= value < self.end
 
         if isinstance(value, TimeWindow):
             return self.start <= value.start and value.end <= self.end
 
         return False
+
+    def __repr__(self) -> str:
+        fmt = "%Y-%m-%d"
+        return "TimeRange" + str([self.start.strftime(fmt), self.end.strftime(fmt)])
 
 
 class RollingTimeWindow:
@@ -52,7 +56,7 @@ class RollingTimeWindow:
         current_start = self.start
         while current_start + self.window_size <= self.end:
             current_end = current_start + self.window_size
-            if current_start < timestamp <= current_end:
+            if current_start <= timestamp < current_end:
                 yield TimeWindow(start=current_start, end=current_end)
             current_start += self.step_size
 
