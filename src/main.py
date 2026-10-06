@@ -4,13 +4,14 @@ from typing import Dict
 
 
 from backtracking.flow_backtracker import FlowBacktracker
+from custom_types.allocation_strategies import (
+    PeriodicContribution,
+)
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
-    OneYearMonthlyGrainPerformanceParameters,
-    OneYearPerformanceParameters,
 )
 from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
@@ -27,29 +28,36 @@ loader.load("AAPL")
 loader.load("XWD.TO")
 
 
-def flow_backtrack(start, end, portfolio) -> TimeSeriesSnapshot:
+def flow_backtrack(start, end) -> TimeSeriesSnapshot:
     now = time.time()
+    portfolioB = Portfolio(
+        positions={"XWD.TO": 0.5, "AAPL": 0.5},
+        strategy=PeriodicContribution({"XWD.TO": 0.5, "AAPL": 0.5}),
+        period=30,
+    )
     backtracker = FlowBacktracker(loader, TimeWindow(start, end), portfolio=portfolio)
     result = backtracker.backtrack(TimeWindow(start, end))
     print(f"Flow backtrack time: {time.time() - now}")
+    print(result.initial_value)
+    print(result.final_value)
+    print(result.contributed_value)
     return result
 
 
 def test_performance():
     portfolioA = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
-    portfolioB = Portfolio(positions={"XWD.TO": 1})
+    portfolioB = Portfolio(
+        positions={"XWD.TO": 0.5, "AAPL": 0.5},
+        strategy=PeriodicContribution({"XWD.TO": 0.5, "AAPL": 0.5}),
+        period=30,
+    )
     portfolios = {portfolioA, portfolioB}
     tickers = {ticker for portfolio in portfolios for ticker in portfolio}
     start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
     end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
 
     # Five Year Performance
-    performance = OneYearMonthlyGrainPerformanceParameters(
-        start=start, end=end, events=global_events, metrics=global_metrics
-    ).build(loader, tickers)
-    PerformanceReporter.print(performance, portfolios)
-    # One Year Performance
-    performance = OneYearPerformanceParameters(
+    performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
     PerformanceReporter.print(performance, portfolios)

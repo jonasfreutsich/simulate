@@ -16,7 +16,9 @@ class PortfolioMetric:
 
 class ReturnMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> float:
-        return snapshot.final_value / snapshot.initial_value
+        return snapshot.final_value / (
+            snapshot.contributed_value + snapshot.initial_value
+        )
 
 
 class MaxDrawdownMetric(PortfolioMetric):
@@ -59,9 +61,21 @@ class AnnualizedReturnMetric(PortfolioMetric):
         return total_return ** (365 / duration.days) - 1
 
 
+class AllocationMetric(PortfolioMetric):
+    def metric(self, snapshot: TimeSeriesSnapshot) -> float:
+        return snapshot.contributed_value
+
+
+class FinalValueMetric(PortfolioMetric):
+    def metric(self, snapshot: TimeSeriesSnapshot) -> float:
+        return snapshot.final_value
+
+
 global_metrics: Dict[str, PortfolioMetric] = {
     "ReturnMetric": ReturnMetric(),
     "DrawdownMetric": MaxDrawdownMetric(),
     "VolatilityMetric": VolatilityMetric(),
     "AnnualizedReturnMetric": AnnualizedReturnMetric(),
+    "AllocationMetric": AllocationMetric(),
+    "FinalValueMetric": FinalValueMetric(),
 }

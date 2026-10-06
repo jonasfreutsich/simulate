@@ -2,7 +2,6 @@ from typing import Dict, Set
 
 from custom_types.portfolio import Portfolio
 from myutils.utils import Utils
-import performance
 from performance.portfolio_performance import (
     PortfolioPerformance,
     PortfolioPerformanceResult,
