@@ -228,7 +228,7 @@ class FlowBacktracker:
                 ticker: self.flows[ticker][timestamp] for ticker in relevant_tickers
             }
 
-            updated_portfolio.flow(update)
+            updated_portfolio.flow(update, timestamp)
 
             points.append(
                 DataPoint(
