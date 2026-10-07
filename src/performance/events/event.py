@@ -2,6 +2,7 @@ from abc import abstractmethod
 from typing import Dict
 
 
+from custom_types.custom_types import Percentage
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.portfolio_metric import MaxDrawdownMetric
 from performance.portfolio_metric import VolatilityMetric
@@ -25,28 +26,28 @@ class NegativeReturnEvent(PortfolioEvent):
 
 
 class LimitDrawdownEvent(PortfolioEvent):
-    def __init__(self, limit_percent: int):
+    def __init__(self, limit_percent: Percentage):
         self.limit_percent = limit_percent
 
     def filter(self, snapshot: TimeSeriesSnapshot) -> bool:
-        return (MaxDrawdownMetric().metric(snapshot) * 100) > self.limit_percent
+        return MaxDrawdownMetric().metric(snapshot) > self.limit_percent
 
 
 class LimitVolatilityEvent(PortfolioEvent):
-    def __init__(self, limit_percent: int):
+    def __init__(self, limit_percent: Percentage):
         self.limit_percent = limit_percent
 
     def filter(self, snapshot: TimeSeriesSnapshot) -> bool:
-        return (VolatilityMetric().metric(snapshot) * 100) > self.limit_percent
+        return VolatilityMetric().metric(snapshot) > self.limit_percent
 
 
 global_events: Dict[str, "PortfolioEvent"] = {
     "CrashEvent": CrashEvent(),
     "NegativeReturnEvent": NegativeReturnEvent(),
-    "10DrawdownEvent": LimitDrawdownEvent(10),
-    "20DrawdownEvent": LimitDrawdownEvent(20),
-    "30DrawdownEvent": LimitDrawdownEvent(30),
-    "10VolatilityEvent": LimitVolatilityEvent(10),
-    "20VolatilityEvent": LimitVolatilityEvent(20),
-    "30VolatilityEvent": LimitVolatilityEvent(30),
+    "10DrawdownEvent": LimitDrawdownEvent(Percentage(0.1)),
+    "20DrawdownEvent": LimitDrawdownEvent(Percentage(0.2)),
+    "30DrawdownEvent": LimitDrawdownEvent(Percentage(0.3)),
+    "10VolatilityEvent": LimitVolatilityEvent(Percentage(0.1)),
+    "20VolatilityEvent": LimitVolatilityEvent(Percentage(0.2)),
+    "30VolatilityEvent": LimitVolatilityEvent(Percentage(0.3)),
 }

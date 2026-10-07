@@ -30,7 +30,7 @@ loader.load("XWD.TO")
 
 def flow_backtrack(start, end) -> TimeSeriesSnapshot:
     now = time.time()
-    portfolioB = Portfolio(
+    portfolio = Portfolio(
         positions={"XWD.TO": 0.5, "AAPL": 0.5},
         strategy=PeriodicContribution({"XWD.TO": 0.5, "AAPL": 0.5}),
         period=30,

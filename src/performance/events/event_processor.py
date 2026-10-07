@@ -1,6 +1,7 @@
 from typing import Dict, overload
 
 
+from custom_types.custom_types import Currency, Percentage
 from custom_types.rolling_time_window import TimeWindow
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.events.event import PortfolioEvent
@@ -13,7 +14,7 @@ class EventProcessor:
 
     def evaluate_event_rates(
         self, snapshots: Dict[TimeWindow, TimeSeriesSnapshot]
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Currency | Percentage]:
         processed: Dict[TimeWindow, Dict[str, bool]] = self._process(snapshots)
         return self._event_rates(processed)
 
@@ -49,14 +50,14 @@ class EventProcessor:
 
     def _event_rates(
         self, snapshots: Dict[TimeWindow, Dict[str, bool]]
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Currency | Percentage]:
         if not snapshots:
             raise ValueError("Empty snapshots data.")
         total = len(snapshots)
-        result: Dict[str, float] = {}
+        result: Dict[str, Currency | Percentage] = {}
         for event_name in self.events:
             filtered_windows = list(
                 filter(lambda window: snapshots[window][event_name], snapshots.keys())
             )
-            result[event_name] = len(filtered_windows) / total
+            result[event_name] = Percentage(len(filtered_windows) / total)
         return result
