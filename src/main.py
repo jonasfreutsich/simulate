@@ -17,6 +17,7 @@ from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
     global_metrics,
 )
+from stockdata import stock_data_loader
 from stockdata.stock_data_loader import StockDataLoader
 import time
 from performance.events.event import global_events
@@ -45,16 +46,20 @@ def flow_backtrack(start, end) -> TimeSeriesSnapshot:
 
 
 def test_performance():
-    portfolioA = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
+    portfolioA = Portfolio(
+        positions={"IWDA.AS": 1},
+        strategy=PeriodicContribution({"IWDA.AS": 1}),
+        period=30,
+    )
     portfolioB = Portfolio(
-        positions={"XWD.TO": 0.5, "AAPL": 0.5},
-        strategy=PeriodicContribution({"XWD.TO": 0.5, "AAPL": 0.5}),
+        positions={"XWD.TO": 1},
+        strategy=PeriodicContribution({"XWD.TO": 1}),
         period=30,
     )
     portfolios = {portfolioA, portfolioB}
     tickers = {ticker for portfolio in portfolios for ticker in portfolio}
-    start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
-    end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
+    start = datetime.fromisoformat("2000-01-01")
+    end = datetime.fromisoformat("2026-09-20")
 
     # Five Year Performance
     performance = FiveYearPerformanceParameters(

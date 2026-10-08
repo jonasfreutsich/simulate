@@ -65,4 +65,4 @@ class Currency:
             raise NotImplemented
 
     def __str__(self) -> str:
-        return str(round(self.value, 2)) + self.currency
+        return self.currency + str(round(self.value, 2))
