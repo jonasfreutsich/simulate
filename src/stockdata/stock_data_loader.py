@@ -4,7 +4,7 @@ from typing import Dict
 
 import pandas as pd
 
-from dataseries.data_series import DataPoint, DataSeries
+from custom_types.dataseries.data_series import DataPoint, DataSeries
 from stockdata.yfinance_api import YFinanceAPI
 
 

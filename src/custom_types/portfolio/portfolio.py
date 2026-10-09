@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Dict, Iterator, Optional
 
-from custom_types.allocation_strategies import AllocationStrategy
-from custom_types.allocator import AllocationSchedule
-from dataseries.data_series import DataSeries
+from custom_types.allocation.allocation_strategies import AllocationStrategy
+from custom_types.allocation.allocator import AllocationSchedule
+from custom_types.dataseries.data_series import DataSeries
 
 ZERO_THRESHOLD = 1e-5
 

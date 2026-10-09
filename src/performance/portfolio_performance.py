@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, Set
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.custom_types import Currency, Percentage
-from custom_types.portfolio import Portfolio
+from custom_types.portfolio.portfolio import Portfolio
 from myutils.utils import Utils
 from performance.events.event_processor import EventProcessor
 

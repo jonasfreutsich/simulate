@@ -4,13 +4,13 @@ from typing import Dict
 
 
 from backtracking.flow_backtracker import FlowBacktracker
-from custom_types.allocation_strategies import (
+from custom_types.allocation.allocation_strategies import (
     FireStrategy,
     PeriodicContribution,
 )
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
-from custom_types.portfolio import Portfolio
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from custom_types.portfolio.portfolio import Portfolio
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
     TenYearPerformanceParameters,

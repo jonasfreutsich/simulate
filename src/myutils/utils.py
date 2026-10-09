@@ -3,9 +3,9 @@ from typing import Dict
 from tabulate import tabulate
 
 from custom_types.custom_types import Currency, Percentage
-from custom_types.portfolio import Portfolio
+from custom_types.portfolio.portfolio import Portfolio
 from custom_types.rolling_time_window import TimeWindow
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 
 
 class Utils:

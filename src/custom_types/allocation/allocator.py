@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from custom_types.allocation_strategies import AllocationStrategy
+from custom_types.allocation.allocation_strategies import AllocationStrategy
 
 
 class AllocationSchedule:

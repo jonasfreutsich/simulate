@@ -3,10 +3,10 @@ from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Set
 
 
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
-from dataseries.data_series import DataPoint, DataSeries
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.data_series import DataPoint, DataSeries
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
-from custom_types.portfolio import Portfolio
+from custom_types.portfolio.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
 
