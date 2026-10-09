@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from numpy import isin
 
 
 @dataclass(frozen=True)
@@ -17,13 +16,13 @@ class Percentage:
             else:
                 raise ValueError("Division by 0 not allowed.")
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __gt__(self, other: "Percentage") -> bool:
         if isinstance(other, Percentage):
             return self.value > other.value
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __str__(self) -> str:
         return str(round(self.value * 100, 2)) + "%"
@@ -47,13 +46,13 @@ class Currency:
                 )
             return Currency(self.value + other.value, self.currency)
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __mul__(self, other: float) -> "Currency":
         if isinstance(other, float):
             return Currency(self.value * other, self.currency)
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __truediv__(self, other: float | int) -> "Currency":
         if isinstance(other, float) or isinstance(other, int):
@@ -62,7 +61,7 @@ class Currency:
             else:
                 raise ValueError("Division by 0 not allowed.")
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __str__(self) -> str:
         return self.currency + str(round(self.value, 2))

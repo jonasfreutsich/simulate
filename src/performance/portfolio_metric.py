@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from statistics import stdev
-from typing import Dict, Sequence, overload
+from typing import Dict, Sequence
 
 
 from custom_types.custom_types import Currency, Percentage
@@ -28,7 +28,7 @@ class PortfolioMetric:
                 Percentage(0),
             ) / len(total_list)
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
 
 class ReturnMetric(PortfolioMetric):
