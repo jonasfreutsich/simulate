@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict
 
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.allocation_strategies import (
+    FireStrategy,
     PeriodicContribution,
 )
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
@@ -12,6 +13,7 @@ from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
+    TenYearPerformanceParameters,
 )
 from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
@@ -45,6 +47,34 @@ def flow_backtrack(start, end) -> TimeSeriesSnapshot:
     return result
 
 
+def test_fire():
+    frame = 10
+    contribution = 1
+    withdrawl = frame - 1
+    pivot = timedelta(days=12 * 30 * (frame - 1))
+    strategy = FireStrategy(contribution, withdrawl, pivot)
+    portfolioA = Portfolio(
+        positions={"IWDA.AS": 1},
+        strategy=strategy,
+        period=30,
+    )
+    portfolioB = Portfolio(
+        positions={"XWD.TO": 1},
+        strategy=strategy,
+        period=30,
+    )
+    portfolios = {portfolioA, portfolioB}
+    tickers = {ticker for portfolio in portfolios for ticker in portfolio}
+    start = datetime.fromisoformat("2000-01-01")
+    end = datetime.fromisoformat("2025-01-01")
+
+    # Performance
+    performance = TenYearPerformanceParameters(
+        start=start, end=end, events=global_events, metrics=global_metrics
+    ).build(loader, tickers)
+    PerformanceReporter.print(performance, portfolios)
+
+
 def test_performance():
     portfolioA = Portfolio(
         positions={"IWDA.AS": 1},
@@ -59,7 +89,7 @@ def test_performance():
     portfolios = {portfolioA, portfolioB}
     tickers = {ticker for portfolio in portfolios for ticker in portfolio}
     start = datetime.fromisoformat("2000-01-01")
-    end = datetime.fromisoformat("2026-09-20")
+    end = datetime.fromisoformat("2025-01-01")
 
     # Five Year Performance
     performance = FiveYearPerformanceParameters(
@@ -82,4 +112,4 @@ def rolling_window_backtrack(
 
 
 if __name__ == "__main__":
-    test_performance()
+    test_fire()

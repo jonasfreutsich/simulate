@@ -1,16 +1,17 @@
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
 from custom_types.allocation_strategies import AllocationStrategy
 
 
-@dataclass
 class AllocationSchedule:
-    strategy: Optional[AllocationStrategy]
-    period: timedelta
-    last_execution_at: datetime | None = None
-    total_contributions: float = 0.0
+    def __init__(self, strategy: AllocationStrategy | None, period: timedelta):
+        self.strategy: Optional[AllocationStrategy] = strategy
+        self.period: timedelta = period
+        self.last_execution_at: datetime | None = None
+        self.first_execution_at: datetime | None = None
+        self.total_contributions: float = 0.0
+        self.total_withdrawls: float = 0.0
 
     def apply(
         self,
@@ -22,6 +23,14 @@ class AllocationSchedule:
             and timestamp - self.last_execution_at < self.period
         ):
             return
+        if self.first_execution_at is None:
+            self.first_execution_at = timestamp
 
         self.last_execution_at = timestamp
-        self.total_contributions += self.strategy.reallocate(allocation)
+        amount = self.strategy.reallocate(
+            allocation, timestamp - self.first_execution_at
+        )
+        if amount > 0:
+            self.total_contributions += amount
+        else:
+            self.total_withdrawls -= amount
