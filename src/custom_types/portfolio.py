@@ -38,7 +38,7 @@ class Portfolio:
         repr = tuple(
             ticker + "=" + str(value) for ticker, value in self._positions.items()
         )
-        return f"Portfolio{repr}" + (self._allocator.strategy.__class__.__name__)
+        return f"Portfolio{repr}\n" + str(self._allocator.strategy or "")
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -66,6 +66,9 @@ class Portfolio:
 
     def get_total_contributions(self) -> float:
         return self._allocator.total_contributions
+
+    def get_total_withdrawls(self) -> float:
+        return self._allocator.total_withdrawls
 
     def get_positions(self) -> Dict[str, float]:
         return self._positions.copy()
@@ -96,7 +99,7 @@ class Portfolio:
         self._allocator.apply(self._positions, timestamp)
 
     def is_crashed(self) -> bool:
-        return abs(self.get_value()) < ZERO_THRESHOLD
+        return self.get_value() < ZERO_THRESHOLD
 
     def normalize(self) -> "Portfolio":
         total = self.get_value()

@@ -20,8 +20,21 @@ class TimeSeriesSnapshot:
         return self.final_portfolio.get_total_contributions()
 
     @property
+    def withdrawl_value(self) -> float:
+        return self.final_portfolio.get_total_withdrawls()
+
+    @property
     def final_value(self) -> float:
         return self.final_portfolio.get_value()
+
+    @property
+    def total_interest(self) -> float:
+        return (
+            self.final_value
+            - self.initial_value
+            - self.contributed_value
+            + self.withdrawl_value
+        )
 
     @property
     def crashed(self) -> bool:

@@ -34,8 +34,8 @@ class PortfolioMetric:
 class ReturnMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> Percentage | Currency:
         return Percentage(
-            snapshot.final_value / (snapshot.contributed_value + snapshot.initial_value)
-            - 1
+            snapshot.total_interest
+            / (snapshot.initial_value + snapshot.contributed_value)
         )
 
 
@@ -75,13 +75,26 @@ class AnnualizedReturnMetric(PortfolioMetric):
         if duration.days <= 0:
             raise ValueError("Snapshot duration must be positive")
 
-        total_return = ReturnMetric().metric(snapshot)
-        return Percentage((total_return.value + 1) ** (365 / duration.days) - 1)
+        relative_total_return = ReturnMetric().metric(snapshot).value + 1
+        if relative_total_return < 0:
+            return Percentage(((-relative_total_return) ** (365 / duration.days) - 1))
+        else:
+            return Percentage((relative_total_return ** (365 / duration.days) - 1))
 
 
-class AllocationMetric(PortfolioMetric):
+class ContributionMetric(PortfolioMetric):
     def metric(self, snapshot: TimeSeriesSnapshot) -> Currency:
         return Currency(snapshot.contributed_value, "$")
+
+
+class WithdrawlMetric(PortfolioMetric):
+    def metric(self, snapshot: TimeSeriesSnapshot) -> Currency:
+        return Currency(snapshot.withdrawl_value, "$")
+
+
+class InterestMetric(PortfolioMetric):
+    def metric(self, snapshot: TimeSeriesSnapshot) -> Currency:
+        return Currency(snapshot.total_interest, "$")
 
 
 class FinalValueMetric(PortfolioMetric):
@@ -94,6 +107,8 @@ global_metrics: Dict[str, PortfolioMetric] = {
     "DrawdownMetric": MaxDrawdownMetric(),
     "VolatilityMetric": VolatilityMetric(),
     "AnnualizedReturnMetric": AnnualizedReturnMetric(),
-    "AllocationMetric": AllocationMetric(),
+    "ContributionMetric": ContributionMetric(),
+    "WithdrawlMetric": WithdrawlMetric(),
+    "TotalInterestMetric": InterestMetric(),
     "FinalValueMetric": FinalValueMetric(),
 }
