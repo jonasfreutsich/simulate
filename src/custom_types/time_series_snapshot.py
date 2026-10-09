@@ -16,14 +16,25 @@ class TimeSeriesSnapshot:
         return self.initial_portfolio.get_value()
 
     @property
-    def final_value(self) -> float:
-        return self.series[-1].value if self.series else 0.0
+    def contributed_value(self) -> float:
+        return self.final_portfolio.get_total_contributions()
 
     @property
-    def return_percentage(self) -> float:
-        if self.initial_value == 0:
-            return 0.0
-        return (self.final_value - self.initial_value) / self.initial_value * 100
+    def withdrawl_value(self) -> float:
+        return self.final_portfolio.get_total_withdrawls()
+
+    @property
+    def final_value(self) -> float:
+        return self.final_portfolio.get_value()
+
+    @property
+    def total_interest(self) -> float:
+        return (
+            self.final_value
+            - self.initial_value
+            - self.contributed_value
+            + self.withdrawl_value
+        )
 
     @property
     def crashed(self) -> bool:

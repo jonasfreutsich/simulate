@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
@@ -41,9 +42,9 @@ class StockDataLoader:
         points = [
             DataPoint(
                 timestamp=(
-                    timestamp.to_pydatetime()  # type: ignore
+                    self.normalize_datetime(timestamp.to_pydatetime())  # type: ignore
                     if hasattr(timestamp, "to_pydatetime")
-                    else timestamp
+                    else self.normalize_datetime(timestamp)  # type: ignore
                 ),
                 value=float(close),
             )
@@ -53,3 +54,7 @@ class StockDataLoader:
 
         self.data[ticker] = DataSeries(points)
         return self.data[ticker]
+
+    @staticmethod
+    def normalize_datetime(date: datetime) -> datetime:
+        return datetime(year=date.year, month=date.month, day=date.day)

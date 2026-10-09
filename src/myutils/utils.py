@@ -2,6 +2,7 @@ from typing import Dict
 
 from tabulate import tabulate
 
+from custom_types.custom_types import Currency, Percentage
 from custom_types.portfolio import Portfolio
 from custom_types.rolling_time_window import TimeWindow
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
@@ -10,25 +11,14 @@ from custom_types.time_series_snapshot import TimeSeriesSnapshot
 class Utils:
 
     @staticmethod
-    def float_to_percent(value: float, ndigits: int = 2) -> float:
-        return round(value * 100, ndigits)
-
-    @staticmethod
-    def float_to_percent_str(value: float | None, ndigits: int = 2) -> str:
-        if value is None:
-            return "None"
-        return str(Utils.float_to_percent(value, ndigits)) + " %"
-
-    @staticmethod
-    def dict_to_md_table(data: dict[Portfolio, dict[str, float]]) -> str:
+    def dict_to_md_table(
+        data: dict[Portfolio, dict[str, Currency | Percentage]],
+    ) -> str:
         columns = list(data.keys())
         rows = [
             [
                 key,
-                *(
-                    Utils.float_to_percent_str(data[column].get(key))
-                    for column in columns
-                ),
+                *(str(data[column].get(key)) for column in columns),
             ]
             for key in data[columns[0]]
         ]

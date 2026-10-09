@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Dict, Set
 
 
 from backtracking.flow_backtracker import FlowBacktracker
+from custom_types.custom_types import Currency, Percentage
 from custom_types.portfolio import Portfolio
 from myutils.utils import Utils
 from performance.events.event_processor import EventProcessor
@@ -14,12 +15,12 @@ from stockdata.stock_data_loader import StockDataLoader
 
 @dataclass(frozen=True)
 class PortfolioPerformanceResult:
-    metrics: Dict[str, float]
-    events: Dict[str, float]
+    metrics: Dict[str, Currency | Percentage]
+    events: Dict[str, Currency | Percentage]
     num_windows: int
 
     @property
-    def result_dict(self) -> Dict[str, float]:
+    def result_dict(self) -> Dict[str, Currency | Percentage]:
         return {
             **self.metrics,
             **self.events,

@@ -1,14 +1,21 @@
-from typing import Dict, Iterator
+from datetime import datetime, timedelta
+from typing import Dict, Iterator, Optional
 
+from custom_types.allocation_strategies import AllocationStrategy
+from custom_types.allocator import AllocationSchedule
 from dataseries.data_series import DataSeries
 
 ZERO_THRESHOLD = 1e-5
 
 
-# TODO add support for dynamic allocation
 class Portfolio:
 
-    def __init__(self, positions: Dict[str, float]) -> None:
+    def __init__(
+        self,
+        positions: Dict[str, float],
+        strategy: Optional[AllocationStrategy] = None,
+        period: int = 30,
+    ) -> None:
 
         if not positions:
             raise ValueError("Portfolio cannot be empty.")
@@ -20,6 +27,9 @@ class Portfolio:
             raise ValueError("Portfolio value must be positive.")
 
         self._positions: Dict[str, float] = positions
+        self._allocator: AllocationSchedule = AllocationSchedule(
+            strategy, timedelta(days=period)
+        )
 
     def __str__(self) -> str:
         return repr(self)
@@ -28,7 +38,7 @@ class Portfolio:
         repr = tuple(
             ticker + "=" + str(value) for ticker, value in self._positions.items()
         )
-        return f"Portfolio{repr}"
+        return f"Portfolio{repr}\n" + str(self._allocator.strategy or "")
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -54,13 +64,25 @@ class Portfolio:
     def get_value(self) -> float:
         return sum(self._positions.values())
 
+    def get_total_contributions(self) -> float:
+        return self._allocator.total_contributions
+
+    def get_total_withdrawls(self) -> float:
+        return self._allocator.total_withdrawls
+
     def get_positions(self) -> Dict[str, float]:
         return self._positions.copy()
 
     def copy(self) -> "Portfolio":
-        return Portfolio(self.get_positions())
+        return Portfolio(
+            self.get_positions(), self._allocator.strategy, self._allocator.period.days
+        )
 
-    def flow(self, position_changes: Dict[str, float] | Dict[str, DataSeries]) -> None:
+    def flow(
+        self,
+        position_changes: Dict[str, float] | Dict[str, DataSeries],
+        timestamp: datetime,
+    ) -> None:
         for ticker in self._positions:
             change = position_changes.get(
                 ticker, 1.0
@@ -74,9 +96,10 @@ class Portfolio:
                 raise ValueError(
                     f"Invalid type for position change: {type(change)}. Must be float or DataSeries."
                 )
+        self._allocator.apply(self._positions, timestamp)
 
     def is_crashed(self) -> bool:
-        return abs(self.get_value()) < ZERO_THRESHOLD
+        return self.get_value() < ZERO_THRESHOLD
 
     def normalize(self) -> "Portfolio":
         total = self.get_value()

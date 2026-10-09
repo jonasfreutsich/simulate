@@ -1,21 +1,25 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict
 
 
 from backtracking.flow_backtracker import FlowBacktracker
+from custom_types.allocation_strategies import (
+    FireStrategy,
+    PeriodicContribution,
+)
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from custom_types.portfolio import Portfolio
 from custom_types.time_series_snapshot import TimeSeriesSnapshot
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
-    OneYearMonthlyGrainPerformanceParameters,
-    OneYearPerformanceParameters,
+    TenYearPerformanceParameters,
 )
 from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
     global_metrics,
 )
+from stockdata import stock_data_loader
 from stockdata.stock_data_loader import StockDataLoader
 import time
 from performance.events.event import global_events
@@ -27,29 +31,68 @@ loader.load("AAPL")
 loader.load("XWD.TO")
 
 
-def flow_backtrack(start, end, portfolio) -> TimeSeriesSnapshot:
+def flow_backtrack(start, end) -> TimeSeriesSnapshot:
     now = time.time()
+    portfolio = Portfolio(
+        positions={"XWD.TO": 0.5, "AAPL": 0.5},
+        strategy=PeriodicContribution({"XWD.TO": 0.5, "AAPL": 0.5}),
+        period=30,
+    )
     backtracker = FlowBacktracker(loader, TimeWindow(start, end), portfolio=portfolio)
     result = backtracker.backtrack(TimeWindow(start, end))
     print(f"Flow backtrack time: {time.time() - now}")
+    print(result.initial_value)
+    print(result.final_value)
+    print(result.contributed_value)
     return result
 
 
-def test_performance():
-    portfolioA = Portfolio(positions={"XWD.TO": 0.5, "AAPL": 0.5})
-    portfolioB = Portfolio(positions={"XWD.TO": 1})
+def test_fire():
+    frame = 10
+    contribution = 1
+    withdrawl = frame - 1
+    pivot = timedelta(days=12 * 30 * (frame - 1))
+    strategy = FireStrategy(contribution, withdrawl, pivot)
+    portfolioA = Portfolio(
+        positions={"IWDA.AS": 1},
+        strategy=strategy,
+        period=30,
+    )
+    portfolioB = Portfolio(
+        positions={"XWD.TO": 1},
+        strategy=strategy,
+        period=30,
+    )
     portfolios = {portfolioA, portfolioB}
     tickers = {ticker for portfolio in portfolios for ticker in portfolio}
-    start = datetime.fromisoformat("2000-01-01T20:00:00+00:00")
-    end = datetime.fromisoformat("2026-09-20T20:00:00+00:00")
+    start = datetime.fromisoformat("2000-01-01")
+    end = datetime.fromisoformat("2025-01-01")
 
-    # Five Year Performance
-    performance = OneYearMonthlyGrainPerformanceParameters(
+    # Performance
+    performance = TenYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
     PerformanceReporter.print(performance, portfolios)
-    # One Year Performance
-    performance = OneYearPerformanceParameters(
+
+
+def test_performance():
+    portfolioA = Portfolio(
+        positions={"IWDA.AS": 1},
+        strategy=PeriodicContribution({"IWDA.AS": 1}),
+        period=30,
+    )
+    portfolioB = Portfolio(
+        positions={"XWD.TO": 1},
+        strategy=PeriodicContribution({"XWD.TO": 1}),
+        period=30,
+    )
+    portfolios = {portfolioA, portfolioB}
+    tickers = {ticker for portfolio in portfolios for ticker in portfolio}
+    start = datetime.fromisoformat("2000-01-01")
+    end = datetime.fromisoformat("2025-01-01")
+
+    # Five Year Performance
+    performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
     ).build(loader, tickers)
     PerformanceReporter.print(performance, portfolios)
@@ -69,4 +112,4 @@ def rolling_window_backtrack(
 
 
 if __name__ == "__main__":
-    test_performance()
+    test_fire()
