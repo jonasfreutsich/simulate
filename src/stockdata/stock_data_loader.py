@@ -8,6 +8,7 @@ from custom_types.dataseries.data_series import DataPoint, DataSeries
 from stockdata.yfinance_api import YFinanceAPI
 
 
+# TODO turn this into a singleton
 class StockDataLoader:
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
