@@ -45,7 +45,9 @@ class FlowBacktracker:
         self.loader: StockDataLoader = StockDataLoader.get_instance()
         self.timestamps: Sequence[datetime] = ()
         self.flows: Dict[str, Dict[datetime, float]] = {}
-        self.time_range: TimeWindow = window
+        self.time_range: TimeWindow = (
+            window  # TODO this is only used for validation. Therefore it should reflect the time_range induced by the common timeline of the tickers. 1. Option is to remove the window parameter completely and deduce the maximal valid range from the tickers.
+        )
         if portfolio is None and tickers is None:
             raise ValueError("tickers and portfolio must not both be None.")
         self.tickers: Set[str] = (
