@@ -46,4 +46,4 @@ class PortfolioComparison:
             events=self.events,
             metrics=self.metrics,
         ).build(tickers)
-        PerformanceReporter.print(performance, portfolios)
+        PerformanceReporter.save("results.md", performance, portfolios)

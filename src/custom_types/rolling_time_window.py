@@ -30,6 +30,12 @@ class TimeWindow:
         fmt = "%Y-%m-%d"
         return "TimeRange" + str([self.start.strftime(fmt), self.end.strftime(fmt)])
 
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
+
 
 class RollingTimeWindow:
     def __init__(

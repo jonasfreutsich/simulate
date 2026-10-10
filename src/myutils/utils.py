@@ -12,15 +12,18 @@ class Utils:
 
     @staticmethod
     def dict_to_md_table(
-        data: dict[Portfolio, dict[str, Currency | Percentage]],
+        data: (
+            dict[Portfolio, dict[str, Currency | Percentage]]
+            | dict[TimeWindow, dict[str, str]]
+        ),
     ) -> str:
         columns = list(data.keys())
         rows = [
             [
                 key,
-                *(str(data[column].get(key)) for column in columns),
+                *(str(data[column].get(key)) for column in columns),  # type: ignore
             ]
-            for key in data[columns[0]]
+            for key in data[columns[0]]  # type: ignore
         ]
 
         return tabulate(

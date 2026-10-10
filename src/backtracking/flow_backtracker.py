@@ -218,7 +218,9 @@ class FlowBacktracker:
         relevant_tickers = tuple(ticker for ticker in self.flows if ticker in portfolio)
         updated_portfolio = portfolio.copy()
         points: List[DataPoint] = []
-
+        print(
+            f"Evaluating {len(self.timestamps[start_index:end_index])} timesteps in a window {TimeWindow(self.timestamps[start_index], self.timestamps[end_index-1])}"
+        )
         for timestamp in self.timestamps[start_index:end_index]:
             if updated_portfolio.is_crashed():
                 break

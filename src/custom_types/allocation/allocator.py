@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
 
 from custom_types.allocation.allocation_strategies import AllocationStrategy
@@ -14,6 +14,8 @@ class AllocationSchedule:
         self.first_execution_at: datetime | None = None
         self.total_contributions: float = 0.0
         self.total_withdrawls: float = 0.0
+        self.withdrawl_timestamps: List[datetime] = []
+        self.contribution_timestamps: List[datetime] = []
 
     def apply(
         self,
@@ -37,6 +39,8 @@ class AllocationSchedule:
             allocation, self.first_execution_at, timestamp
         )
         if amount > 0:
+            self.contribution_timestamps.append(timestamp)
             self.total_contributions += amount
         else:
+            self.withdrawl_timestamps.append(timestamp)
             self.total_withdrawls -= amount

@@ -50,8 +50,8 @@ def test_comparison():
         Portfolio({"XWD.TO": 1}),
     }
     comp = PortfolioComparison(portfolios)
-    start = datetime.fromisoformat("2000-01-01")
-    end = datetime.fromisoformat("2025-01-01")
+    start = datetime.fromisoformat("2006-01-01")
+    end = datetime.fromisoformat("2011-01-01")
     comp.compare(
         strategy,
         time_frame=TimeWindow(start, end),

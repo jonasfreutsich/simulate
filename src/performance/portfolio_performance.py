@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Set
+from typing import TYPE_CHECKING, Dict, Set, Tuple
 
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.custom_types import Currency, Percentage
 from custom_types.portfolio.portfolio import Portfolio
+from custom_types.rolling_time_window import TimeWindow
 from myutils.utils import Utils
 from performance.events.event_processor import EventProcessor
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 class PortfolioPerformanceResult:
     metrics: Dict[str, Currency | Percentage]
     events: Dict[str, Currency | Percentage]
-    num_windows: int
+    details_info: Dict[TimeWindow, Dict[str, str]]
 
     @property
     def result_dict(self) -> Dict[str, Currency | Percentage]:
@@ -67,12 +68,20 @@ class PortfolioPerformance:
         portfolio: Portfolio,
         event_processor: EventProcessor,
     ) -> PortfolioPerformanceResult:
-        snap = self.backtracker.rolling_backtrack(
+        snapshots = self.backtracker.rolling_backtrack(
             self.rolling_window, portfolio=portfolio
         )
-        Utils.filter_empty_snapshots(snap)
-        metric_results = dict(event_processor.evaluate_event_rates(snap))
-        event_results = {}
+        Utils.filter_empty_snapshots(snapshots)
+        event_rates = dict(event_processor.evaluate_event_rates(snapshots))
+        metric_results = {}
+        details_result: Dict[TimeWindow, Dict[str, str]] = {}
         for key, metric in self.metrics.items():
-            event_results[key] = metric.average(tuple(snap.values()))
-        return PortfolioPerformanceResult(metric_results, event_results, len(snap))
+            metric_results[key] = metric.average(tuple(snapshots.values()))
+        for window, snapshot in snapshots.items():
+            details_result[window] = {}
+            for key, metric in self.metrics.items():
+                try:
+                    details_result[window][key] = str(metric.metric(snapshot))
+                except NotImplementedError:
+                    continue
+        return PortfolioPerformanceResult(metric_results, event_rates, details_result)
