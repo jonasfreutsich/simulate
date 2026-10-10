@@ -49,13 +49,11 @@ class FireStrategy(AllocationStrategy):
         self, ticker: str, start_time: datetime, current_time: datetime
     ) -> float:
         if current_time < start_time + self.pivot:
-            print(f"Contribute {current_time}")
             if isinstance(self.contribution, dict):
                 return self.contribution.get(ticker, 0)
             else:
                 return self.contribution
         else:
-            print(f"Withdraw {current_time}")
             if isinstance(self.withdraw, dict):
                 return -self.withdraw.get(ticker, 0)
             else:

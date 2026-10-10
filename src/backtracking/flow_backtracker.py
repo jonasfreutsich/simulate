@@ -30,7 +30,6 @@ class FlowBacktracker:
 
     def __init__(
         self,
-        loader: StockDataLoader,
         window: TimeWindow,
         tickers: Optional[Set[str]] = None,
         portfolio: Optional[Portfolio] = None,
@@ -43,7 +42,7 @@ class FlowBacktracker:
             portfolio (Optional[Portfolio]): Initial portfolio to backtrack.
         """
 
-        self.loader: StockDataLoader = loader
+        self.loader: StockDataLoader = StockDataLoader.get_instance()
         self.timestamps: Sequence[datetime] = ()
         self.flows: Dict[str, Dict[datetime, float]] = {}
         self.time_range: TimeWindow = window

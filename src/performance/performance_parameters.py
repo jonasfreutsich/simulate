@@ -10,7 +10,6 @@ from performance.portfolio_metric import PortfolioMetric
 from performance.portfolio_performance import (
     PortfolioPerformance,
 )
-from stockdata.stock_data_loader import StockDataLoader
 
 
 @dataclass(frozen=True)
@@ -35,8 +34,8 @@ class PerformanceParameters:
     def rolling_window(self) -> RollingTimeWindow:
         return RollingTimeWindow(self.start, self.end, self.window_size, self.step_size)
 
-    def build(self, loader: StockDataLoader, tickers: Set[str]) -> PortfolioPerformance:
-        return PortfolioPerformance.build(loader, tickers, self)
+    def build(self, tickers: Set[str]) -> PortfolioPerformance:
+        return PortfolioPerformance.build(tickers, self)
 
 
 @dataclass(frozen=True)

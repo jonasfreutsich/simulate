@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime
 from typing import Dict
+
+from matplotlib.dates import relativedelta
 
 
 from backtracking.flow_backtracker import FlowBacktracker
@@ -8,37 +9,32 @@ from custom_types.allocation.allocation_strategies import (
     FireStrategy,
     PeriodicContribution,
 )
+from custom_types.portfolio.portfolio_comparison import PortfolioComparison
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from custom_types.portfolio.portfolio import Portfolio
 from custom_types.dataseries.snapshot import TimeSeriesSnapshot
+from custom_types.time_types import CalendarDelta, Period
 from performance.performance_parameters import (
     FiveYearPerformanceParameters,
-    TenYearPerformanceParameters,
 )
 from performance.performance_reporter import PerformanceReporter
 from performance.portfolio_metric import (
     global_metrics,
 )
-from stockdata import stock_data_loader
-from stockdata.stock_data_loader import StockDataLoader
 import time
 from performance.events.event import global_events
-
-DATA_DIR = Path("./datasets/")
-DATA_DIR.mkdir(exist_ok=True)
-loader = StockDataLoader(DATA_DIR)
-loader.load("AAPL")
-loader.load("XWD.TO")
+from stockdata.stock_data_loader import StockDataLoader
 
 
 def flow_backtrack(start, end) -> TimeSeriesSnapshot:
     now = time.time()
     portfolio = Portfolio(
         positions={"XWD.TO": 0.5, "AAPL": 0.5},
-        strategy=PeriodicContribution({"XWD.TO": 0.5, "AAPL": 0.5}),
-        period=30,
+        strategy=PeriodicContribution(30, {"XWD.TO": 0.5, "AAPL": 0.5}),
     )
-    backtracker = FlowBacktracker(loader, TimeWindow(start, end), portfolio=portfolio)
+    backtracker = FlowBacktracker(
+        StockDataLoader.get_instance(), TimeWindow(start, end), portfolio=portfolio
+    )
     result = backtracker.backtrack(TimeWindow(start, end))
     print(f"Flow backtrack time: {time.time() - now}")
     print(result.initial_value)
@@ -47,44 +43,31 @@ def flow_backtrack(start, end) -> TimeSeriesSnapshot:
     return result
 
 
-def test_fire():
-    frame = 10
-    contribution = 1
-    withdrawl = frame - 1
-    pivot = timedelta(days=12 * 30 * (frame - 1))
-    strategy = FireStrategy(contribution, withdrawl, pivot)
-    portfolioA = Portfolio(
-        positions={"IWDA.AS": 1},
-        strategy=strategy,
-        period=30,
-    )
-    portfolioB = Portfolio(
-        positions={"XWD.TO": 1},
-        strategy=strategy,
-        period=30,
-    )
-    portfolios = {portfolioA, portfolioB}
-    tickers = {ticker for portfolio in portfolios for ticker in portfolio}
+def test_comparison():
+    strategy = FireStrategy(Period.MONTHLY, 1, 4, relativedelta(years=4))
+    portfolios = {
+        Portfolio({"IWDA.AS": 1}),
+        Portfolio({"XWD.TO": 1}),
+    }
+    comp = PortfolioComparison(portfolios)
     start = datetime.fromisoformat("2000-01-01")
     end = datetime.fromisoformat("2025-01-01")
-
-    # Performance
-    performance = TenYearPerformanceParameters(
-        start=start, end=end, events=global_events, metrics=global_metrics
-    ).build(loader, tickers)
-    PerformanceReporter.print(performance, portfolios)
+    comp.compare(
+        strategy,
+        time_frame=TimeWindow(start, end),
+        window_size=CalendarDelta.FIVE_YEARS,
+        step_size=CalendarDelta.ONE_YEAR,
+    )
 
 
 def test_performance():
     portfolioA = Portfolio(
         positions={"IWDA.AS": 1},
-        strategy=PeriodicContribution({"IWDA.AS": 1}),
-        period=30,
+        strategy=PeriodicContribution(Period.MONTHLY, {"IWDA.AS": 1}),
     )
     portfolioB = Portfolio(
         positions={"XWD.TO": 1},
-        strategy=PeriodicContribution({"XWD.TO": 1}),
-        period=30,
+        strategy=PeriodicContribution(Period.MONTHLY, {"XWD.TO": 1}),
     )
     portfolios = {portfolioA, portfolioB}
     tickers = {ticker for portfolio in portfolios for ticker in portfolio}
@@ -94,7 +77,7 @@ def test_performance():
     # Five Year Performance
     performance = FiveYearPerformanceParameters(
         start=start, end=end, events=global_events, metrics=global_metrics
-    ).build(loader, tickers)
+    ).build(tickers)
     PerformanceReporter.print(performance, portfolios)
 
 
@@ -102,7 +85,7 @@ def rolling_window_backtrack(
     start, end, window_size, step_size, portfolio
 ) -> Dict[TimeWindow, TimeSeriesSnapshot]:
     now = time.time()
-    backtracker = FlowBacktracker(loader, TimeWindow(start, end), portfolio)
+    backtracker = FlowBacktracker(TimeWindow(start, end), portfolio)
     rolling_window = RollingTimeWindow(start, end, window_size, step_size)
     result = backtracker.rolling_backtrack(rolling_window)
 
@@ -112,4 +95,4 @@ def rolling_window_backtrack(
 
 
 if __name__ == "__main__":
-    test_fire()
+    test_comparison()

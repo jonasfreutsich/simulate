@@ -7,8 +7,9 @@ import pandas as pd
 from custom_types.dataseries.data_series import DataPoint, DataSeries
 from stockdata.yfinance_api import YFinanceAPI
 
+instance = None
 
-# TODO turn this into a singleton
+
 class StockDataLoader:
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
@@ -59,3 +60,14 @@ class StockDataLoader:
     @staticmethod
     def normalize_datetime(date: datetime) -> datetime:
         return datetime(year=date.year, month=date.month, day=date.day)
+
+    @staticmethod
+    def get_instance():
+        global instance
+        DATA_DIR = Path("./datasets/")
+
+        if instance is None:
+            DATA_DIR.mkdir(exist_ok=True)
+            instance = StockDataLoader(DATA_DIR)
+
+        return instance

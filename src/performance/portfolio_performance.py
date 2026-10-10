@@ -10,7 +10,6 @@ from performance.events.event_processor import EventProcessor
 
 if TYPE_CHECKING:
     from performance.performance_parameters import PerformanceParameters
-from stockdata.stock_data_loader import StockDataLoader
 
 
 @dataclass(frozen=True)
@@ -45,12 +44,11 @@ class PortfolioPerformance:
     @classmethod
     def build(
         cls,
-        loader: StockDataLoader,
         tickers: Set[str],
         parameters: "PerformanceParameters",
     ):
         backtracker = FlowBacktracker(
-            loader, parameters.rolling_window.get_range(), tickers=tickers
+            parameters.rolling_window.get_range(), tickers=tickers
         )
         return cls(parameters, backtracker)
 
