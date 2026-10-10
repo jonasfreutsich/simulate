@@ -1,6 +1,9 @@
 from dataclasses import dataclass
-from datetime import timedelta, datetime
+from datetime import datetime
 from typing import Any, Generator
+
+
+from custom_types.time_types import CalendarDelta
 
 
 @dataclass(frozen=True)
@@ -33,17 +36,13 @@ class RollingTimeWindow:
         self,
         start: datetime,
         end: datetime,
-        window_size: timedelta,
-        step_size: timedelta,
+        window_size: CalendarDelta,
+        step_size: CalendarDelta,
     ):
         self.window_size = window_size
         self.start = start
         self.end = end
         self.step_size = step_size
-        if self.step_size <= timedelta(0):
-            raise ValueError("step_size must be positive")
-        if self.window_size <= timedelta(0):
-            raise ValueError("window_size must be positive")
 
     def __iter__(self) -> Generator[TimeWindow, Any, None]:
         current_start = self.start

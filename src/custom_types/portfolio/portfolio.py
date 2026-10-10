@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Iterator, Optional
 
 from custom_types.allocation.allocation_strategies import AllocationStrategy
@@ -14,7 +14,6 @@ class Portfolio:
         self,
         positions: Dict[str, float],
         strategy: Optional[AllocationStrategy] = None,
-        period: int = 30,
     ) -> None:
 
         if not positions:
@@ -27,8 +26,8 @@ class Portfolio:
             raise ValueError("Portfolio value must be positive.")
 
         self._positions: Dict[str, float] = positions
-        self._allocator: AllocationSchedule = AllocationSchedule(
-            strategy, timedelta(days=period)
+        self._allocator: AllocationSchedule | None = (
+            AllocationSchedule(strategy) if strategy is not None else None
         )
 
     def __str__(self) -> str:
@@ -38,7 +37,10 @@ class Portfolio:
         repr = tuple(
             ticker + "=" + str(value) for ticker, value in self._positions.items()
         )
-        return f"Portfolio{repr}\n" + str(self._allocator.strategy or "")
+        allocator_repr = (
+            "" if self._allocator is None else str(self._allocator.strategy)
+        )
+        return f"Portfolio{repr}\n" + allocator_repr
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -65,17 +67,18 @@ class Portfolio:
         return sum(self._positions.values())
 
     def get_total_contributions(self) -> float:
-        return self._allocator.total_contributions
+        return self._allocator.total_contributions if self._allocator else 0.0
 
     def get_total_withdrawls(self) -> float:
-        return self._allocator.total_withdrawls
+        return self._allocator.total_withdrawls if self._allocator else 0.0
 
     def get_positions(self) -> Dict[str, float]:
         return self._positions.copy()
 
     def copy(self) -> "Portfolio":
         return Portfolio(
-            self.get_positions(), self._allocator.strategy, self._allocator.period.days
+            self.get_positions(),
+            self._allocator.strategy if self._allocator is not None else None,
         )
 
     def flow(
@@ -96,7 +99,8 @@ class Portfolio:
                 raise ValueError(
                     f"Invalid type for position change: {type(change)}. Must be float or DataSeries."
                 )
-        self._allocator.apply(self._positions, timestamp)
+        if self._allocator is not None:
+            self._allocator.apply(self._positions, timestamp)
 
     def is_crashed(self) -> bool:
         return self.get_value() < ZERO_THRESHOLD

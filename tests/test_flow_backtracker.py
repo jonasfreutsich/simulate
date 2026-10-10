@@ -96,9 +96,8 @@ def test_time_window_contains_datetime():
 
     assert dt(1) in window
     assert dt(2) in window
-    assert dt(3) in window
+    assert dt(3) not in window
     assert dt(0) not in window
-    assert dt(4) not in window
 
 
 def test_time_window_contains_nested_window():

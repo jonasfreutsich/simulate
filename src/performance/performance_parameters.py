@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from datetime import timedelta, datetime
+from datetime import datetime
 from typing import Dict, Set
 
 
+from custom_types.time_types import CalendarDelta
 from custom_types.rolling_time_window import RollingTimeWindow
 from performance.events.event import PortfolioEvent
 from performance.portfolio_metric import PortfolioMetric
@@ -16,12 +17,12 @@ from stockdata.stock_data_loader import StockDataLoader
 class PerformanceParameters:
     start: datetime
     end: datetime
-    window_size: timedelta
-    step_size: timedelta
+    window_size: CalendarDelta
+    step_size: CalendarDelta
     events: Dict[str, PortfolioEvent] = field(default_factory=dict)
     metrics: Dict[str, PortfolioMetric] = field(default_factory=dict)
 
-    def __poist_init__(self):
+    def __post_init__(self):
         if not self.metrics and not self.events:
             raise ValueError("Either metrics or events must be specified.")
         overlap = set(self.events) & set(self.metrics)
@@ -40,23 +41,23 @@ class PerformanceParameters:
 
 @dataclass(frozen=True)
 class FiveYearPerformanceParameters(PerformanceParameters):
-    window_size: timedelta = timedelta(days=365 * 5)
-    step_size: timedelta = timedelta(days=365)
+    window_size: CalendarDelta = CalendarDelta.FIVE_YEARS
+    step_size: CalendarDelta = CalendarDelta.ONE_YEAR
 
 
 @dataclass(frozen=True)
 class TenYearPerformanceParameters(PerformanceParameters):
-    window_size: timedelta = timedelta(days=365 * 10)
-    step_size: timedelta = timedelta(days=365)
+    window_size: CalendarDelta = CalendarDelta.TEN_YEARS
+    step_size: CalendarDelta = CalendarDelta.ONE_YEAR
 
 
 @dataclass(frozen=True)
 class OneYearPerformanceParameters(PerformanceParameters):
-    window_size: timedelta = timedelta(days=365)
-    step_size: timedelta = timedelta(days=365)
+    window_size: CalendarDelta = CalendarDelta.FIVE_YEARS
+    step_size: CalendarDelta = CalendarDelta.ONE_YEAR
 
 
 @dataclass(frozen=True)
 class OneYearMonthlyGrainPerformanceParameters(PerformanceParameters):
-    window_size: timedelta = timedelta(days=365)
-    step_size: timedelta = timedelta(days=30)
+    window_size: CalendarDelta = CalendarDelta.FIVE_YEARS
+    step_size: CalendarDelta = CalendarDelta.ONE_YEAR
