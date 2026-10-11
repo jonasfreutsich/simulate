@@ -67,3 +67,13 @@ class RollingTimeWindow:
 
     def get_range(self) -> TimeWindow:
         return TimeWindow(self.start, self.end)
+
+    def is_empty(self) -> bool:
+        return self.start + self.window_size > self.end
+
+    def trim(self, range: TimeWindow) -> "RollingTimeWindow":
+        if not range in self.get_range():
+            raise ValueError("Cannot trim a RollingTimeWindow to a larger range.")
+        return RollingTimeWindow(
+            range.start, range.end, self.window_size, self.step_size
+        )

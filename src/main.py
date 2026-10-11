@@ -23,24 +23,11 @@ from performance.portfolio_metric import (
 )
 import time
 from performance.events.event import global_events
-from stockdata.stock_data_loader import StockDataLoader
+import logging
 
-
-def flow_backtrack(start, end) -> TimeSeriesSnapshot:
-    now = time.time()
-    portfolio = Portfolio(
-        positions={"XWD.TO": 0.5, "AAPL": 0.5},
-        strategy=PeriodicContribution(30, {"XWD.TO": 0.5, "AAPL": 0.5}),
-    )
-    backtracker = FlowBacktracker(
-        StockDataLoader.get_instance(), TimeWindow(start, end), portfolio=portfolio
-    )
-    result = backtracker.backtrack(TimeWindow(start, end))
-    print(f"Flow backtrack time: {time.time() - now}")
-    print(result.initial_value)
-    print(result.final_value)
-    print(result.contributed_value)
-    return result
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("simulate")
+logger.setLevel(logging.INFO)
 
 
 def test_comparison():
@@ -50,8 +37,8 @@ def test_comparison():
         Portfolio({"XWD.TO": 1}),
     }
     comp = PortfolioComparison(portfolios)
-    start = datetime.fromisoformat("2006-01-01")
-    end = datetime.fromisoformat("2011-01-01")
+    start = datetime.fromisoformat("2009-01-01")
+    end = datetime.fromisoformat("2015-01-01")
     comp.compare(
         strategy,
         time_frame=TimeWindow(start, end),

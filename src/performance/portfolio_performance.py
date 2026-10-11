@@ -1,16 +1,20 @@
 from dataclasses import dataclass
+from turtle import back
 from typing import TYPE_CHECKING, Dict, Set, Tuple
 
 
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.custom_types import Currency, Percentage
 from custom_types.portfolio.portfolio import Portfolio
-from custom_types.rolling_time_window import TimeWindow
+from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from myutils.utils import Utils
 from performance.events.event_processor import EventProcessor
 
 if TYPE_CHECKING:
     from performance.performance_parameters import PerformanceParameters
+import logging
+
+logger = logging.getLogger("simulate")
 
 
 @dataclass(frozen=True)
@@ -33,11 +37,20 @@ class PortfolioPerformance:
         parameters: "PerformanceParameters",
         backtracker: FlowBacktracker,
     ):
-        self.rolling_window = parameters.rolling_window
+        self.rolling_window: RollingTimeWindow = parameters.rolling_window.trim(
+            backtracker.time_range
+        )
+        if self.rolling_window.is_empty():
+            raise ValueError(
+                f"RollingWindow range was narrowed to a trivial RollingWindow while building backtracker."
+            )
         self.metrics = parameters.metrics
         self.events = parameters.events
         self.backtracker = backtracker
         self.parameters = parameters
+        logger.info(
+            f"Built PortfolioPerformance instance:\n\ttickers: {self.backtracker.tickers}\n\ttime range: {self.rolling_window.get_range()}\n\twindow size: {self.rolling_window.window_size}\n\tstep size: {self.rolling_window.step_size}."
+        )
 
     def get_paramters_name(self) -> str:
         return self.parameters.__class__.__name__

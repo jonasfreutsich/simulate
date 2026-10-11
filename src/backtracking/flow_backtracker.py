@@ -74,7 +74,11 @@ class FlowBacktracker:
         )
         if not self.timestamps:
             self.flows = {ticker: {} for ticker in self.tickers}
-            return  # Early return if there are no timestamps in the range
+            # Early return if there are no timestamps in the range
+            return
+
+        # trim the valid time range to the total range of calculated timestamps
+        self.time_range = TimeWindow(self.timestamps[0], self.timestamps[-1])
 
         last_price_points = {
             ticker: series.before(self.timestamps[0])
