@@ -16,19 +16,23 @@ class Utils:
             dict[Portfolio, dict[str, Currency | Percentage]]
             | dict[TimeWindow, dict[str, str]]
         ),
+        header: str = "",
     ) -> str:
         columns = list(data.keys())
-        rows = [
-            [
-                key,
-                *(str(data[column].get(key)) for column in columns),  # type: ignore
+        if not columns:
+            rows = []
+        else:
+            rows = [
+                [
+                    key,
+                    *(str(data[column].get(key)) for column in columns),  # type: ignore
+                ]
+                for key in data[columns[0]]  # type: ignore
             ]
-            for key in data[columns[0]]  # type: ignore
-        ]
 
         return tabulate(
             rows,
-            headers=["Metric/Event", *list(map(lambda col: str(col), columns))],
+            headers=[header, *list(map(lambda col: str(col), columns))],
             tablefmt="github",
         )
 

@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Dict, Set
 
-from custom_types.portfolio import portfolio
 from custom_types.portfolio.portfolio import Portfolio
 from myutils.utils import Utils
 from performance.portfolio_performance import (
@@ -16,19 +15,30 @@ class PerformanceReporter:
         ret = []
         ret.append(
             Utils.dict_to_md_table(
-                {portfolio: result[portfolio].result_dict for portfolio in result}
+                {portfolio: result[portfolio].result_dict for portfolio in result},
+                header="Metric/Event",
             )
         )
         for portfolio in result:
-            ret.append(Utils.dict_to_md_table(result[portfolio].details_info))
+            if not result[portfolio].details_info:
+                continue
+            ret.append(str(portfolio))
+            ret.append(
+                Utils.dict_to_md_table(
+                    result[portfolio].details_info,
+                )
+            )
 
         return "\n".join(ret)
 
     @classmethod
     def print(
-        cls, performance: PortfolioPerformance, portfolios: Set[Portfolio]
+        cls,
+        performance: PortfolioPerformance,
+        portfolios: Set[Portfolio],
+        details: bool = False,
     ) -> None:
-        result = performance.evaluate(portfolios)
+        result = performance.evaluate(portfolios, details)
         if not result:
             raise ValueError()
         print(performance.get_paramters_name())
@@ -44,8 +54,9 @@ class PerformanceReporter:
         filepath: str,
         performance: PortfolioPerformance,
         portfolios: Set[Portfolio],
+        details: bool = False,
     ) -> None:
-        result = performance.evaluate(portfolios)
+        result = performance.evaluate(portfolios, details)
         if not result:
             raise ValueError()
         path = Path(filepath)

@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Set
 
 
+
 from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 from custom_types.dataseries.data_series import DataPoint, DataSeries
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
@@ -192,7 +193,6 @@ class FlowBacktracker:
             )
 
         result: Dict[TimeWindow, TimeSeriesSnapshot] = {}
-
         for window in rolling_window:
             result[window] = self.backtrack_window(window, backtrack_portfolio)
 
@@ -224,9 +224,7 @@ class FlowBacktracker:
         relevant_tickers = tuple(ticker for ticker in self.flows if ticker in portfolio)
         updated_portfolio = portfolio.copy()
         points: List[DataPoint] = []
-        print(
-            f"Evaluating {len(self.timestamps[start_index:end_index])} timesteps in a window {TimeWindow(self.timestamps[start_index], self.timestamps[end_index-1])}"
-        )
+
         for timestamp in self.timestamps[start_index:end_index]:
             if updated_portfolio.is_crashed():
                 break

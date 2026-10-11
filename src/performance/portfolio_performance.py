@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from turtle import back
-from typing import TYPE_CHECKING, Dict, Set, Tuple
+from typing import TYPE_CHECKING, Dict, Set
 
 
 from backtracking.flow_backtracker import FlowBacktracker
@@ -42,7 +41,7 @@ class PortfolioPerformance:
         )
         if self.rolling_window.is_empty():
             raise ValueError(
-                f"RollingWindow range was narrowed to a trivial RollingWindow while building backtracker."
+                "RollingWindow range was narrowed to a trivial RollingWindow while building backtracker."
             )
         self.metrics = parameters.metrics
         self.events = parameters.events
@@ -67,19 +66,16 @@ class PortfolioPerformance:
         return cls(parameters, backtracker)
 
     def evaluate(
-        self,
-        portfolios: Set[Portfolio],
+        self, portfolios: Set[Portfolio], details: bool
     ) -> Dict[Portfolio, PortfolioPerformanceResult]:
         event_processor = EventProcessor(self.events)
         return {
-            portfolio: self._evaluate_portfolio(portfolio, event_processor)
+            portfolio: self._evaluate_portfolio(portfolio, event_processor, details)
             for portfolio in portfolios
         }
 
     def _evaluate_portfolio(
-        self,
-        portfolio: Portfolio,
-        event_processor: EventProcessor,
+        self, portfolio: Portfolio, event_processor: EventProcessor, details: bool
     ) -> PortfolioPerformanceResult:
         snapshots = self.backtracker.rolling_backtrack(
             self.rolling_window, portfolio=portfolio
@@ -90,11 +86,12 @@ class PortfolioPerformance:
         details_result: Dict[TimeWindow, Dict[str, str]] = {}
         for key, metric in self.metrics.items():
             metric_results[key] = metric.average(tuple(snapshots.values()))
-        for window, snapshot in snapshots.items():
-            details_result[window] = {}
-            for key, metric in self.metrics.items():
-                try:
-                    details_result[window][key] = str(metric.metric(snapshot))
-                except NotImplementedError:
-                    continue
+        if details:
+            for window, snapshot in snapshots.items():
+                details_result[window] = {}
+                for key, metric in self.metrics.items():
+                    try:
+                        details_result[window][key] = str(metric.metric(snapshot))
+                    except NotImplementedError:
+                        continue
         return PortfolioPerformanceResult(metric_results, event_rates, details_result)
