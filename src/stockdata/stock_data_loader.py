@@ -1,12 +1,16 @@
 from datetime import datetime
+import json
+import logging
 from pathlib import Path
 from typing import Dict
 
 import pandas as pd
 
 from custom_types.dataseries.data_series import DataPoint, DataSeries
+from stockdata.ticker_db import YTicker
 from stockdata.yfinance_api import YFinanceAPI
 
+logger = logging.getLogger("simulate")
 instance = None
 
 
@@ -20,11 +24,13 @@ class StockDataLoader:
 
     def load(self, ticker: str) -> DataSeries:
         if ticker in self.data:
+            logger.info(f"Loading ticker {ticker} from database.")
             return self.data[ticker]
 
         path = self.get_ticker_path(ticker)
 
         if not path.exists():
+            logger.info(f"Loading ticker {ticker} from YFinanceAPI.")
             YFinanceAPI.download(ticker, path)
             if not path.exists():
                 raise FileNotFoundError(
@@ -56,6 +62,14 @@ class StockDataLoader:
 
         self.data[ticker] = DataSeries(points)
         return self.data[ticker]
+
+    def save_info(self, path: Path):
+        info = {}
+        for ticker, series in self.data.items():
+            yticker = YTicker(ticker)
+            yticker.set_range(series.start().timestamp, series.end().timestamp)
+            info[yticker.name] = str(yticker.range)
+        path.write_text(json.dumps(info, indent=2))
 
     @staticmethod
     def normalize_datetime(date: datetime) -> datetime:
