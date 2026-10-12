@@ -47,7 +47,7 @@ global_events: Dict[str, "PortfolioEvent"] = {
     "10DrawdownEvent": LimitDrawdownEvent(Percentage(0.1)),
     "20DrawdownEvent": LimitDrawdownEvent(Percentage(0.2)),
     "30DrawdownEvent": LimitDrawdownEvent(Percentage(0.3)),
+    "2VolatilityEvent": LimitVolatilityEvent(Percentage(0.02)),
+    "5VolatilityEvent": LimitVolatilityEvent(Percentage(0.05)),
     "10VolatilityEvent": LimitVolatilityEvent(Percentage(0.1)),
-    "20VolatilityEvent": LimitVolatilityEvent(Percentage(0.2)),
-    "30VolatilityEvent": LimitVolatilityEvent(Percentage(0.3)),
 }
