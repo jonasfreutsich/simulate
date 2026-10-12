@@ -28,7 +28,6 @@ class PortfolioComparison:
         window_size: CalendarDelta,
         step_size: CalendarDelta,
     ):
-        frame = 10
         portfolios = {
             Portfolio(portfolio.get_positions(), strategy)
             for portfolio in self.portfolios
@@ -46,4 +45,4 @@ class PortfolioComparison:
             events=self.events,
             metrics=self.metrics,
         ).build(tickers)
-        PerformanceReporter.save("results.md", performance, portfolios)
+        PerformanceReporter.save("results.md", performance, portfolios, details=False)
