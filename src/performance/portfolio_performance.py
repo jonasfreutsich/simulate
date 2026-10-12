@@ -9,6 +9,8 @@ from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from myutils.utils import Utils
 from performance.events.event_processor import EventProcessor
 
+from performance.events.snapshot_info import global_infos
+
 if TYPE_CHECKING:
     from performance.performance_parameters import PerformanceParameters
 import logging
@@ -36,6 +38,7 @@ class PortfolioPerformance:
         parameters: "PerformanceParameters",
         backtracker: FlowBacktracker,
     ):
+        global global_infos
         self.rolling_window: RollingTimeWindow = parameters.rolling_window.trim(
             backtracker.time_range
         )
@@ -45,6 +48,7 @@ class PortfolioPerformance:
             )
         self.metrics = parameters.metrics
         self.events = parameters.events
+        self.infos = global_infos
         self.backtracker = backtracker
         self.parameters = parameters
         logger.info(
@@ -94,4 +98,7 @@ class PortfolioPerformance:
                         details_result[window][key] = str(metric.metric(snapshot))
                     except NotImplementedError:
                         continue
+                for key, info in self.infos.items():
+                    details_result[window][key] = str(info(snapshot))
+
         return PortfolioPerformanceResult(metric_results, event_rates, details_result)
