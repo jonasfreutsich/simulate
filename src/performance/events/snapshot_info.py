@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from custom_types.dataseries.snapshot import TimeSeriesSnapshot
+from performance.events.event import CrashEvent
 
 
 class SnapshotInfo(ABC):
@@ -10,7 +11,10 @@ class SnapshotInfo(ABC):
 
 class CrashDayInfo(SnapshotInfo):
     def __call__(self, snapshot: TimeSeriesSnapshot) -> str:
-        return str(snapshot.end_timestamp)
+        if CrashEvent().filter(snapshot):
+            return str(snapshot.end_timestamp)
+        else:
+            return " not crashed "
 
 
 class StartDayInfo(SnapshotInfo):
