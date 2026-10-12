@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Dict
 
 from matplotlib.dates import relativedelta
@@ -16,6 +17,10 @@ from custom_types.time_types import CalendarDelta, Period
 import time
 import logging
 
+from performance.performance_reporter import PerformanceReporter
+from stockdata.stock_data_loader import StockDataLoader
+from stockdata.ticker_db import YTicker
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("simulate")
 logger.setLevel(logging.INFO)
@@ -24,18 +29,21 @@ logger.setLevel(logging.INFO)
 def test_comparison():
     strategy = FireStrategy(Period.MONTHLY, 1, 4, relativedelta(years=4))
     portfolios = {
-        Portfolio({"IWDA.AS": 1}),
-        Portfolio({"XWD.TO": 1}),
+        Portfolio({YTicker.by_name("S&P500").yticker: 1}),
+        Portfolio({YTicker.by_name("MSCI World").yticker: 1}),
     }
     comp = PortfolioComparison(portfolios)
-    start = datetime.fromisoformat("2009-01-01")
+    start = datetime.fromisoformat("2000-01-01")
     end = datetime.fromisoformat("2025-01-01")
-    comp.compare(
+    results = comp.compare(
         strategy,
         time_frame=TimeWindow(start, end),
         window_size=CalendarDelta.FIVE_YEARS,
         step_size=CalendarDelta.ONE_YEAR,
+        details=True,
     )
+    PerformanceReporter.save("results.md", results)
+    StockDataLoader.get_instance().save_info(Path("ticker_info.json"))
 
 
 def rolling_window_backtrack(

@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import Dict, Set
+from typing import Dict
 
 from custom_types.portfolio.portfolio import Portfolio
 from myutils.utils import Utils
 from performance.portfolio_performance import (
-    PortfolioPerformance,
     PortfolioPerformanceResult,
 )
 
@@ -32,33 +31,24 @@ class PerformanceReporter:
         return "\n".join(ret)
 
     @classmethod
-    def print(
-        cls,
-        performance: PortfolioPerformance,
-        portfolios: Set[Portfolio],
-        details: bool = False,
-    ) -> None:
-        result = performance.evaluate(portfolios, details)
-        if not result:
+    def print(cls, results: Dict[Portfolio, PortfolioPerformanceResult]) -> None:
+        if not results:
             raise ValueError()
-        print(performance.get_paramters_name())
-        nbr_windows = len(result[portfolios.copy().pop()].details_info)
-        print(
-            f"Evaluated {nbr_windows} windows in the {performance.rolling_window.get_range()}"
-        )
-        print(cls.to_markdown(result))
+        nbr_windows = -1
+        for portfolio, result in results.items():
+            local_nbr = len(result.details_info)
+            if nbr_windows != -1 and local_nbr != nbr_windows:
+                raise RuntimeError()
+            nbr_windows = local_nbr
+        print(f"Evaluated {nbr_windows} time frames.")
+        print(cls.to_markdown(results))
 
     @classmethod
     def save(
-        cls,
-        filepath: str,
-        performance: PortfolioPerformance,
-        portfolios: Set[Portfolio],
-        details: bool = False,
+        cls, filepath: str, results: Dict[Portfolio, PortfolioPerformanceResult]
     ) -> None:
-        result = performance.evaluate(portfolios, details)
-        if not result:
+        if not results:
             raise ValueError()
         path = Path(filepath)
         with open(path, "w") as file:
-            file.write(cls.to_markdown(result))
+            file.write(cls.to_markdown(results))
