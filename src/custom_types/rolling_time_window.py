@@ -30,6 +30,12 @@ class TimeWindow:
         fmt = "%Y-%m-%d"
         return "TimeRange" + str([self.start.strftime(fmt), self.end.strftime(fmt)])
 
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
+
 
 class RollingTimeWindow:
     def __init__(
@@ -61,3 +67,13 @@ class RollingTimeWindow:
 
     def get_range(self) -> TimeWindow:
         return TimeWindow(self.start, self.end)
+
+    def is_empty(self) -> bool:
+        return self.start + self.window_size > self.end
+
+    def trim(self, range: TimeWindow) -> "RollingTimeWindow":
+        if range not in self.get_range():
+            raise ValueError("Cannot trim a RollingTimeWindow to a larger range.")
+        return RollingTimeWindow(
+            range.start, range.end, self.window_size, self.step_size
+        )

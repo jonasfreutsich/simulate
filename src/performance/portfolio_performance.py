@@ -5,18 +5,24 @@ from typing import TYPE_CHECKING, Dict, Set
 from backtracking.flow_backtracker import FlowBacktracker
 from custom_types.custom_types import Currency, Percentage
 from custom_types.portfolio.portfolio import Portfolio
+from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
 from myutils.utils import Utils
 from performance.events.event_processor import EventProcessor
 
+from performance.events.snapshot_info import global_infos
+
 if TYPE_CHECKING:
     from performance.performance_parameters import PerformanceParameters
+import logging
+
+logger = logging.getLogger("simulate")
 
 
 @dataclass(frozen=True)
 class PortfolioPerformanceResult:
     metrics: Dict[str, Currency | Percentage]
     events: Dict[str, Currency | Percentage]
-    num_windows: int
+    details_info: Dict[TimeWindow, Dict[str, str]]
 
     @property
     def result_dict(self) -> Dict[str, Currency | Percentage]:
@@ -32,11 +38,22 @@ class PortfolioPerformance:
         parameters: "PerformanceParameters",
         backtracker: FlowBacktracker,
     ):
-        self.rolling_window = parameters.rolling_window
+        global global_infos
+        self.rolling_window: RollingTimeWindow = parameters.rolling_window.trim(
+            backtracker.time_range
+        )
+        if self.rolling_window.is_empty():
+            raise ValueError(
+                "RollingWindow range was narrowed to a trivial RollingWindow while building backtracker."
+            )
         self.metrics = parameters.metrics
         self.events = parameters.events
+        self.infos = global_infos
         self.backtracker = backtracker
         self.parameters = parameters
+        logger.info(
+            f"Built PortfolioPerformance instance:\n\ttickers: {self.backtracker.tickers}\n\ttime range: {self.rolling_window.get_range()}\n\twindow size: {self.rolling_window.window_size}\n\tstep size: {self.rolling_window.step_size}."
+        )
 
     def get_paramters_name(self) -> str:
         return self.parameters.__class__.__name__
@@ -53,26 +70,35 @@ class PortfolioPerformance:
         return cls(parameters, backtracker)
 
     def evaluate(
-        self,
-        portfolios: Set[Portfolio],
+        self, portfolios: Set[Portfolio], details: bool
     ) -> Dict[Portfolio, PortfolioPerformanceResult]:
         event_processor = EventProcessor(self.events)
         return {
-            portfolio: self._evaluate_portfolio(portfolio, event_processor)
+            portfolio: self._evaluate_portfolio(portfolio, event_processor, details)
             for portfolio in portfolios
         }
 
     def _evaluate_portfolio(
-        self,
-        portfolio: Portfolio,
-        event_processor: EventProcessor,
+        self, portfolio: Portfolio, event_processor: EventProcessor, details: bool
     ) -> PortfolioPerformanceResult:
-        snap = self.backtracker.rolling_backtrack(
+        snapshots = self.backtracker.rolling_backtrack(
             self.rolling_window, portfolio=portfolio
         )
-        Utils.filter_empty_snapshots(snap)
-        metric_results = dict(event_processor.evaluate_event_rates(snap))
-        event_results = {}
+        Utils.filter_empty_snapshots(snapshots)
+        event_rates = dict(event_processor.evaluate_event_rates(snapshots))
+        metric_results = {}
+        details_result: Dict[TimeWindow, Dict[str, str]] = {}
         for key, metric in self.metrics.items():
-            event_results[key] = metric.average(tuple(snap.values()))
-        return PortfolioPerformanceResult(metric_results, event_results, len(snap))
+            metric_results[key] = metric.average(tuple(snapshots.values()))
+        if details:
+            for window, snapshot in snapshots.items():
+                details_result[window] = {}
+                for key, metric in self.metrics.items():
+                    try:
+                        details_result[window][key] = str(metric.metric(snapshot))
+                    except NotImplementedError:
+                        continue
+                for key, info in self.infos.items():
+                    details_result[window][key] = str(info(snapshot))
+
+        return PortfolioPerformanceResult(metric_results, event_rates, details_result)
