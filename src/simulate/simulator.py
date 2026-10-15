@@ -9,7 +9,7 @@ from custom_types.simulation_model import (
 )
 from custom_types.simulators.linear import LinearTrend
 
-from dataseries.data_series import DataPoint, DataSeries
+from custom_types.dataseries.data_series import DataPoint, DataSeries
 
 # ---------------------------------------------------------------------------
 # Simulator

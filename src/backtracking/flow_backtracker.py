@@ -3,10 +3,11 @@ from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Set
 
 
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
-from dataseries.data_series import DataPoint, DataSeries
+
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.data_series import DataPoint, DataSeries
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
-from custom_types.portfolio import Portfolio
+from custom_types.portfolio.portfolio import Portfolio
 from stockdata.stock_data_loader import StockDataLoader
 
 
@@ -30,7 +31,6 @@ class FlowBacktracker:
 
     def __init__(
         self,
-        loader: StockDataLoader,
         window: TimeWindow,
         tickers: Optional[Set[str]] = None,
         portfolio: Optional[Portfolio] = None,
@@ -43,10 +43,12 @@ class FlowBacktracker:
             portfolio (Optional[Portfolio]): Initial portfolio to backtrack.
         """
 
-        self.loader: StockDataLoader = loader
+        self.loader: StockDataLoader = StockDataLoader.get_instance()
         self.timestamps: Sequence[datetime] = ()
         self.flows: Dict[str, Dict[datetime, float]] = {}
-        self.time_range: TimeWindow = window
+        self.time_range: TimeWindow = (
+            window  # TODO this is only used for validation. Therefore it should reflect the time_range induced by the common timeline of the tickers. 1. Option is to remove the window parameter completely and deduce the maximal valid range from the tickers.
+        )
         if portfolio is None and tickers is None:
             raise ValueError("tickers and portfolio must not both be None.")
         self.tickers: Set[str] = (
@@ -73,7 +75,11 @@ class FlowBacktracker:
         )
         if not self.timestamps:
             self.flows = {ticker: {} for ticker in self.tickers}
-            return  # Early return if there are no timestamps in the range
+            # Early return if there are no timestamps in the range
+            return
+
+        # trim the valid time range to the total range of calculated timestamps
+        self.time_range = TimeWindow(self.timestamps[0], self.timestamps[-1])
 
         last_price_points = {
             ticker: series.before(self.timestamps[0])
@@ -187,7 +193,6 @@ class FlowBacktracker:
             )
 
         result: Dict[TimeWindow, TimeSeriesSnapshot] = {}
-
         for window in rolling_window:
             result[window] = self.backtrack_window(window, backtrack_portfolio)
 

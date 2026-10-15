@@ -3,29 +3,36 @@ from typing import Dict
 from tabulate import tabulate
 
 from custom_types.custom_types import Currency, Percentage
-from custom_types.portfolio import Portfolio
+from custom_types.portfolio.portfolio import Portfolio
 from custom_types.rolling_time_window import TimeWindow
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 
 
 class Utils:
 
     @staticmethod
     def dict_to_md_table(
-        data: dict[Portfolio, dict[str, Currency | Percentage]],
+        data: (
+            dict[Portfolio, dict[str, Currency | Percentage]]
+            | dict[TimeWindow, dict[str, str]]
+        ),
+        header: str = "",
     ) -> str:
         columns = list(data.keys())
-        rows = [
-            [
-                key,
-                *(str(data[column].get(key)) for column in columns),
+        if not columns:
+            rows = []
+        else:
+            rows = [
+                [
+                    key,
+                    *(str(data[column].get(key)) for column in columns),  # type: ignore
+                ]
+                for key in data[columns[0]]  # type: ignore
             ]
-            for key in data[columns[0]]
-        ]
 
         return tabulate(
             rows,
-            headers=["Metric/Event", *list(map(lambda col: str(col), columns))],
+            headers=[header, *list(map(lambda col: str(col), columns))],
             tablefmt="github",
         )
 

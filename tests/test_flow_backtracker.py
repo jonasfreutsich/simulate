@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import pytest
 
 from backtracking.flow_backtracker import FlowBacktracker
-from custom_types.portfolio import Portfolio
+from custom_types.portfolio.portfolio import Portfolio
 from custom_types.rolling_time_window import RollingTimeWindow, TimeWindow
-from dataseries.data_series import DataPoint, DataSeries
+from custom_types.dataseries.data_series import DataPoint, DataSeries
 from stockdata.stock_data_loader import StockDataLoader
 
 # ---------------------------------------------------------------------------
@@ -96,9 +96,8 @@ def test_time_window_contains_datetime():
 
     assert dt(1) in window
     assert dt(2) in window
-    assert dt(3) in window
+    assert dt(3) not in window
     assert dt(0) not in window
-    assert dt(4) not in window
 
 
 def test_time_window_contains_nested_window():

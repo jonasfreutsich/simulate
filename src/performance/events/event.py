@@ -3,7 +3,7 @@ from typing import Dict
 
 
 from custom_types.custom_types import Percentage
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 from performance.portfolio_metric import MaxDrawdownMetric
 from performance.portfolio_metric import VolatilityMetric
 
@@ -47,7 +47,7 @@ global_events: Dict[str, "PortfolioEvent"] = {
     "10DrawdownEvent": LimitDrawdownEvent(Percentage(0.1)),
     "20DrawdownEvent": LimitDrawdownEvent(Percentage(0.2)),
     "30DrawdownEvent": LimitDrawdownEvent(Percentage(0.3)),
+    "2VolatilityEvent": LimitVolatilityEvent(Percentage(0.02)),
+    "5VolatilityEvent": LimitVolatilityEvent(Percentage(0.05)),
     "10VolatilityEvent": LimitVolatilityEvent(Percentage(0.1)),
-    "20VolatilityEvent": LimitVolatilityEvent(Percentage(0.2)),
-    "30VolatilityEvent": LimitVolatilityEvent(Percentage(0.3)),
 }

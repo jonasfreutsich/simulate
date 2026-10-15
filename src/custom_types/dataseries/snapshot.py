@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from custom_types.portfolio import Portfolio
-from dataseries.data_series import DataSeries
+from custom_types.portfolio.portfolio import Portfolio
+from custom_types.dataseries.data_series import DataSeries
 
 
 @dataclass

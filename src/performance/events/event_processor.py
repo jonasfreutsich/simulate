@@ -3,7 +3,7 @@ from typing import Dict, overload
 
 from custom_types.custom_types import Currency, Percentage
 from custom_types.rolling_time_window import TimeWindow
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 from performance.events.event import PortfolioEvent
 
 

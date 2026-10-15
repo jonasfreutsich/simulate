@@ -4,16 +4,18 @@ from typing import Dict, Sequence
 
 
 from custom_types.custom_types import Currency, Percentage
-from custom_types.time_series_snapshot import TimeSeriesSnapshot
+from custom_types.dataseries.snapshot import TimeSeriesSnapshot
 
 
 class PortfolioMetric:
     @abstractmethod
     def metric(self, snapshot: TimeSeriesSnapshot) -> Percentage | Currency: ...
 
-    def average(self, snapshots: Sequence[TimeSeriesSnapshot]) -> Percentage | Currency:
+    def average(
+        self, snapshots: Sequence[TimeSeriesSnapshot]
+    ) -> Percentage | Currency | None:
         if not snapshots or len(snapshots) == 0:
-            raise ValueError()
+            raise ValueError("Refusing to average over empty input.")
 
         total_list = list(map(self.metric, snapshots))
         if isinstance(total_list[0], Currency):
